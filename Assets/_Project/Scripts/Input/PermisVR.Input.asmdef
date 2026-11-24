@@ -1,0 +1,16 @@
+{
+    "name": "PermisVR.Input",
+    "rootNamespace": "PermisVR.Input",
+    "references": [
+        "PermisVR.Vehicle",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}
