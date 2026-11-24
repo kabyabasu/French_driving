@@ -1,0 +1,15 @@
+{
+    "name": "PermisVR.ExamUnity",
+    "rootNamespace": "PermisVR.ExamUnity",
+    "references": [
+        "PermisVR.Exam"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}
