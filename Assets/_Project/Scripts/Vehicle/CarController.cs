@@ -59,6 +59,6 @@ namespace PermisVR.Vehicle
 
         // Unity 6+ renamed Rigidbody.velocity to linearVelocity; swap this once the
         // Unity version in CLAUDE.md is pinned, if it's 6.0 or later.
-        public float SpeedKmh => _rigidbody.velocity.magnitude * 3.6f;
+        public float SpeedKmh => _rigidbody.linearVelocity.magnitude * 3.6f;
     }
 }
