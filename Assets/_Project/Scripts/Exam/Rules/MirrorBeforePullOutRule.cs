@@ -12,16 +12,13 @@ namespace PermisVR.Exam.Rules
 
         private readonly MirrorRulesConfig _config;
         private readonly MirrorCheckHistory _history = new();
-        private bool _stopped = true;
-
-        // Negative infinity = stationary since the exam started, so the first move always counts.
-        private float _stoppedSinceS = float.NegativeInfinity;
-        private float _pendingMoveStartS = float.NaN;
+        private readonly MoveOffDetector _moveOff;
         private int _intersectionsInside;
 
         public MirrorBeforePullOutRule(MirrorRulesConfig config)
         {
             _config = config;
+            _moveOff = new MoveOffDetector(config);
         }
 
         public void HandleEvent(in ExamEvent evt)
@@ -38,40 +35,12 @@ namespace PermisVR.Exam.Rules
                     _intersectionsInside = Math.Max(0, _intersectionsInside - 1);
                     break;
                 case ExamEventType.VehicleTick:
-                    OnTick(evt.Vehicle);
+                    if (_moveOff.Tick(evt.Vehicle, _intersectionsInside > 0, out var moveStartS))
+                    {
+                        Evaluate(evt.Vehicle, moveStartS);
+                    }
+
                     break;
-            }
-        }
-
-        private void OnTick(in VehicleSnapshot vehicle)
-        {
-            // Judged once the grace period after moving off has passed.
-            if (!float.IsNaN(_pendingMoveStartS) && vehicle.TimeS >= _pendingMoveStartS + _config.GraceS)
-            {
-                Evaluate(vehicle, _pendingMoveStartS);
-                _pendingMoveStartS = float.NaN;
-            }
-
-            if (vehicle.SpeedKmh <= _config.StoppedSpeedKmh)
-            {
-                if (!_stopped)
-                {
-                    _stopped = true;
-                    _stoppedSinceS = vehicle.TimeS;
-                }
-
-                return;
-            }
-
-            if (!_stopped)
-            {
-                return;
-            }
-
-            _stopped = false;
-            if (vehicle.TimeS - _stoppedSinceS >= _config.PullOutMinStopS && _intersectionsInside == 0)
-            {
-                _pendingMoveStartS = vehicle.TimeS;
             }
         }
 

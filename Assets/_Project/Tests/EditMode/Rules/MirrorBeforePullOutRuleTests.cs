@@ -116,5 +116,30 @@ namespace PermisVR.Exam.Tests.Rules
 
             Assert.IsEmpty(faults);
         }
+
+        [Test]
+        public void SettlingAtSpawn_IsNotMovingOff()
+        {
+            var (rule, faults) = NewRule();
+
+            // Suspension bounce in the first second (peaks at 2 km/h), then parked.
+            Drive(rule, 0f, 8f, t => t < 1f ? 2f * (float)Math.Abs(Math.Sin(t * 10f)) : 0f);
+
+            Assert.IsEmpty(faults);
+        }
+
+        [Test]
+        public void CreepingBelowMoveOffSpeed_IsNotJudgedUntilReallyMoving()
+        {
+            var (rule, faults) = NewRule();
+
+            // Creeps at 2 km/h from 1 s, then really moves off at 10 s: judged at 10 s, not 1 s.
+            Drive(rule, 0f, 10f, t => t < 1f ? 0f : 2f);
+            Assert.IsEmpty(faults);
+
+            Drive(rule, 10f, 14f, _ => 20f);
+            Assert.That(faults, Has.Count.EqualTo(1));
+            Assert.That(faults[0].TimeS, Is.GreaterThanOrEqualTo(10f));
+        }
     }
 }

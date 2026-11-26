@@ -19,5 +19,9 @@ namespace PermisVR.Exam
         /// The vehicle entered/left a junction area (several can overlap).
         IntersectionEnter,
         IntersectionExit,
+
+        /// The driver turned their head over a shoulder (angle mort); ZoneId is a BlindSpotIds value.
+        /// Appended last: sensors store this enum by index in scenes.
+        BlindSpotChecked,
     }
 }

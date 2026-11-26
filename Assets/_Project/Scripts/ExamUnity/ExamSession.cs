@@ -28,7 +28,7 @@ namespace PermisVR.ExamUnity
 
             if (_mirrorRulesConfig == null)
             {
-                Debug.LogError("ExamSession: no MirrorRulesConfig assigned, mirror checks are NOT graded. " +
+                Debug.LogError("ExamSession: no MirrorRulesConfig assigned, mirror and blind-spot checks are NOT graded. " +
                                "Run PermisVR > Scene > Add Mirrors.");
                 return;
             }
@@ -37,6 +37,8 @@ namespace PermisVR.ExamUnity
             Register(new MirrorBeforeTurnRule(mirrorRules));
             Register(new MirrorBeforePullOutRule(mirrorRules));
             Register(new MirrorBeforeBrakingRule(mirrorRules));
+            Register(new BlindSpotBeforePullOutRule(mirrorRules));
+            Register(new BlindSpotBeforeTurnRule(mirrorRules));
         }
 
         private void Register(IExamRule rule)
@@ -59,8 +61,11 @@ namespace PermisVR.ExamUnity
         {
             var carTransform = _car.transform;
             var position = carTransform.position;
+            // Speed along the road only: the car settling on its suspension at spawn (vertical
+            // motion) must not look like moving off. Physics is m/s; km/h from here on.
+            var speedKmh = Vector3.ProjectOnPlane(_carBody.linearVelocity, carTransform.up).magnitude * 3.6f;
             // Route position stays 0 until exam routes exist (M5).
-            return new VehicleSnapshot(Time.time, _car.SpeedKmh, 0f, carTransform.eulerAngles.y, position.x, position.z);
+            return new VehicleSnapshot(Time.time, speedKmh, 0f, carTransform.eulerAngles.y, position.x, position.z);
         }
     }
 }

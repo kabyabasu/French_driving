@@ -1,7 +1,7 @@
 namespace PermisVR.Exam
 {
-    /// Recent mirror checks in a fixed ring buffer (no allocation after construction), so a rule
-    /// can ask "was this mirror checked between two times?" after the maneuver is recognised.
+    /// Recent mirror or blind-spot checks in a fixed ring buffer (no allocation after construction), so a rule
+    /// can ask "was this mirror (or blind spot) checked between two times?" after the maneuver is recognised.
     public sealed class MirrorCheckHistory
     {
         private const int Capacity = 64;
