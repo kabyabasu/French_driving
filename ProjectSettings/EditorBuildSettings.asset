@@ -4,7 +4,10 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/_Project/Scenes/M1_TestPlane.unity
+    guid: 72448a9ba35e74ab1894949443efb87a
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 63170a14b939f426c91a12fde628ca0c, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 7fc46c9527c8f4e668dd06e99125ead5, type: 2}

@@ -22,6 +22,9 @@ namespace PermisVR.Input
 
         public float Steer => Mathf.Clamp(_wheelAngleDeg / _config.maxWheelAngleDeg, -1f, 1f);
 
+        /// Raw wheel rotation in degrees, positive = clockwise (turning right) as seen from the seat.
+        public float WheelAngleDeg => _wheelAngleDeg;
+
         /// Fed externally each frame (e.g. by PlayerDrivingInput) so this script never
         /// needs to reference Vehicle/ directly.
         public void SetCarSpeedKmh(float speedKmh)
@@ -57,7 +60,9 @@ namespace PermisVR.Input
 
             if (prevAngleDeg.HasValue)
             {
-                _wheelAngleDeg += Mathf.DeltaAngle(prevAngleDeg.Value, angleDeg);
+                // AngleAroundWheel grows counterclockwise (seen from the seat); the wheel angle
+                // grows clockwise so that Steer is +1 for a right turn.
+                _wheelAngleDeg -= Mathf.DeltaAngle(prevAngleDeg.Value, angleDeg);
             }
 
             prevAngleDeg = angleDeg;

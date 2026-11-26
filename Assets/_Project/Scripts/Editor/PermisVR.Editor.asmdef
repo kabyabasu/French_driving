@@ -6,7 +6,9 @@
         "PermisVR.ExamUnity",
         "PermisVR.Vehicle",
         "PermisVR.Input",
-        "Unity.InputSystem"
+        "PermisVR.UI",
+        "Unity.InputSystem",
+        "Unity.XR.OpenXR"
     ],
     "includePlatforms": [
         "Editor"

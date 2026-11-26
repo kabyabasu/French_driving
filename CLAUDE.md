@@ -9,8 +9,8 @@ VR driving game for **Meta Quest 3**. The player drives a French *permis B* exam
 4. Visuals come last.
 
 ## Tech stack
-- Unity `<VERSION — fill in>` with URP
-- Meta XR SDK `<package + version — fill in>`
+- Unity `6000.6.10f1` with URP
+- Meta XR SDK `com.meta.xr.sdk.core` `209.0.0` (Core only; the all-in-one bundle's Platform SDK breaks sideloaded installs)
 - Android, ARM64, IL2CPP
 - Unity Test Framework (EditMode tests for all grading logic)
 - Git + Git LFS for binary assets
@@ -208,7 +208,7 @@ Keep these values in data, not code. **Verify against the official Sécurité ro
 - Each rule class starts with a one-line XML doc comment stating the real-world rule.
 
 ## Roadmap (update as milestones are done)
-- [ ] M1 Drive a car in VR on a flat test plane (seated, controllers as wheel)
+- [x] M1 Drive a car in VR on a flat test plane (seated, controllers as wheel)
 - [ ] M2 Argenteuil starter area: OSM pipeline, roads, buildings and signs within ~1 km of the start point
 - [ ] M3 First rules on real Argenteuil intersections (STOP, lights, crossings, priorité à droite) + tests
 - [ ] M4 ScoreSheet + results screen styled like the CEPC grid

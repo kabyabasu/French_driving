@@ -22,6 +22,7 @@ namespace PermisVR.Vehicle
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
+            _rigidbody.centerOfMass = _config.centerOfMass;
             _rigidbody.interpolation = _config.interpolate
                 ? RigidbodyInterpolation.Interpolate
                 : RigidbodyInterpolation.None;
@@ -40,7 +41,9 @@ namespace PermisVR.Vehicle
                 return;
             }
 
-            var steerAngle = _input.Steer * _config.maxSteerAngleDeg;
+            var speedFactor = Mathf.Clamp01(SpeedKmh / _config.highSpeedReferenceKmh);
+            var lockDeg = Mathf.Lerp(_config.maxSteerAngleDeg, _config.highSpeedSteerAngleDeg, speedFactor);
+            var steerAngle = _input.Steer * lockDeg;
             _frontLeft.steerAngle = steerAngle;
             _frontRight.steerAngle = steerAngle;
 

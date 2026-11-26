@@ -90,6 +90,7 @@ namespace PermisVR.Editor
             rigRoot.SetParent(cockpit, false);
             rigRoot.localPosition = Vector3.zero;
             rigRoot.localRotation = Quaternion.identity;
+            SeatedRigFix.ZeroLegacyCameraOffset(rigRoot);
             return true;
         }
 

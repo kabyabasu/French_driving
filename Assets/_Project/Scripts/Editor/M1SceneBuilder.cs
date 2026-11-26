@@ -44,7 +44,13 @@ namespace PermisVR.Editor
         private static GameObject CreateCar()
         {
             var car = new GameObject("Car");
-            car.AddComponent<Rigidbody>().mass = 1200f;
+            // Wheels sit at local Y -0.3 with the default WheelCollider radius (0.5), so the
+            // car must spawn well above world Y 0 or the wheels start embedded in the ground
+            // and the first physics step flings the Rigidbody into a wild spin.
+            car.transform.position = new Vector3(0f, 0.9f, 0f);
+            var rigidbody = car.AddComponent<Rigidbody>();
+            rigidbody.mass = 1200f;
+            rigidbody.centerOfMass = new Vector3(0f, -0.3f, 0f);
             var controller = car.AddComponent<CarController>();
 
             var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -52,7 +58,8 @@ namespace PermisVR.Editor
             body.transform.SetParent(car.transform, false);
             body.transform.localScale = new Vector3(1.8f, 1f, 4f);
             body.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-            Object.DestroyImmediate(body.GetComponent<BoxCollider>());
+            // Keep the BoxCollider: WheelColliders don't count toward Rigidbody inertia, so
+            // without a body collider Unity falls back to a 1,1,1 tensor and the car spins wildly.
 
             var frontLeft = CreateWheel("WheelFL", new Vector3(-0.8f, -0.3f, 1.3f), car.transform);
             var frontRight = CreateWheel("WheelFR", new Vector3(0.8f, -0.3f, 1.3f), car.transform);
@@ -84,7 +91,8 @@ namespace PermisVR.Editor
         {
             var cockpit = new GameObject("Cockpit");
             cockpit.transform.SetParent(car.transform, false);
-            cockpit.transform.localPosition = new Vector3(0f, 0.6f, 0.3f);
+            // France is left-hand-drive: the driver's seat (and wheel) sits on the car's left.
+            cockpit.transform.localPosition = new Vector3(-0.45f, 0.6f, 0.3f);
 
             // Placeholders: once the Meta XR camera rig is added under Cockpit, re-point these
             // two at its real left/right controller transforms. Auto-detecting the rig's exact

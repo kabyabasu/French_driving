@@ -36,6 +36,25 @@ namespace PermisVR.Input
             _car.SetInputSource(this);
         }
 
+        // Actions from an .inputactions asset start disabled and read 0 until enabled. This
+        // enables the whole Driving map, which the wheel grips and the hand TrackedPoseDrivers
+        // also read from.
+        private void OnEnable()
+        {
+            if (_throttle != null)
+            {
+                _throttle.action.actionMap.Enable();
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_throttle != null)
+            {
+                _throttle.action.actionMap.Disable();
+            }
+        }
+
         private void Update()
         {
             if (_wheel != null)
