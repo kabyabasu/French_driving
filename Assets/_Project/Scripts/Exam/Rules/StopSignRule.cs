@@ -11,7 +11,10 @@ namespace PermisVR.Exam.Rules
         public event Action<Fault> FaultRaised;
 
         private readonly StopSignRuleConfig _config;
-        private readonly Dictionary<string, bool> _stoppedByZoneId = new();
+
+        // Reused collections: HandleEvent runs on every VehicleTick and must not allocate.
+        private readonly List<string> _activeZoneIds = new();
+        private readonly HashSet<string> _stoppedZoneIds = new();
 
         public StopSignRule(StopSignRuleConfig config)
         {
@@ -23,7 +26,12 @@ namespace PermisVR.Exam.Rules
             switch (evt.Type)
             {
                 case ExamEventType.StopZoneEnter:
-                    _stoppedByZoneId[evt.ZoneId] = false;
+                    if (!_activeZoneIds.Contains(evt.ZoneId))
+                    {
+                        _activeZoneIds.Add(evt.ZoneId);
+                    }
+
+                    _stoppedZoneIds.Remove(evt.ZoneId);
                     break;
 
                 case ExamEventType.VehicleTick:
@@ -43,32 +51,25 @@ namespace PermisVR.Exam.Rules
                 return;
             }
 
-            // A VehicleTick is global, not per zone: only zones currently entered are tracked here.
-            foreach (var zoneId in new List<string>(_stoppedByZoneId.Keys))
+            // A VehicleTick is global, not per zone: every zone currently entered counts as stopped.
+            for (var i = 0; i < _activeZoneIds.Count; i++)
             {
-                _stoppedByZoneId[zoneId] = true;
+                _stoppedZoneIds.Add(_activeZoneIds[i]);
             }
         }
 
         private void HandleZoneExit(in ExamEvent evt)
         {
-            if (!_stoppedByZoneId.TryGetValue(evt.ZoneId, out var stopped))
+            if (!_activeZoneIds.Remove(evt.ZoneId))
             {
                 return;
             }
 
-            if (!stopped)
+            if (!_stoppedZoneIds.Remove(evt.ZoneId))
             {
-                FaultRaised?.Invoke(new Fault(
-                    RuleId,
-                    criterion: "controle_vehicule",
-                    FaultSeverity.Eliminatory,
-                    evt.Vehicle.TimeS,
-                    evt.Vehicle.RoutePositionM,
-                    explanationFr: "Arrêt non marqué au STOP"));
+                FaultRaised?.Invoke(Fault.At(evt.Vehicle, RuleId, ExamCriteria.ReadTheRoad,
+                    FaultSeverity.Eliminatory, "Arrêt non marqué au STOP"));
             }
-
-            _stoppedByZoneId.Remove(evt.ZoneId);
         }
     }
 }

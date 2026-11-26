@@ -6,6 +6,11 @@ namespace PermisVR.Exam
         VehicleTick,
 
         StopZoneEnter,
+
+        /// The vehicle's front crossed the STOP line moving forward.
         StopZoneExit,
+
+        /// The vehicle's front axle crossed a traffic-light stop line moving forward; carries the light state.
+        StopLineCrossed,
     }
 }

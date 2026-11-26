@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace PermisVR.Exam
@@ -9,6 +10,8 @@ namespace PermisVR.Exam
 
         public IReadOnlyList<Fault> Faults => _faults;
         public bool HasEliminatoryFault { get; private set; }
+
+        public event Action<Fault> FaultAdded;
 
         public void Watch(IExamRule rule)
         {
@@ -22,6 +25,8 @@ namespace PermisVR.Exam
             {
                 HasEliminatoryFault = true;
             }
+
+            FaultAdded?.Invoke(fault);
         }
     }
 }

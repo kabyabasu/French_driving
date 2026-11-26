@@ -1,6 +1,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PermisVR.Exam;
+using PermisVR.ExamUnity;
+using PermisVR.ExamUnity.Config;
+using PermisVR.Traffic;
+using PermisVR.UI;
+using PermisVR.Vehicle;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -18,6 +24,17 @@ namespace PermisVR.Editor.Map
         private const string M1ScenePath = "Assets/_Project/Scenes/M1_TestPlane.unity";
         private const string M2ScenePath = "Assets/_Project/Scenes/M2_Argenteuil.unity";
         private const string RootName = "Map_Generated";
+        private const string StopSignConfigPath = "Assets/_Project/Data/StopSignRuleConfig.asset";
+        private const string TrafficTimingPath = "Assets/_Project/Data/TrafficLightTiming.asset";
+
+        // Exam zone geometry. Sensors sit above wheel height so WheelCollider rays never touch them.
+        private const float StopZoneLengthM = 12f;
+        private const float LineSensorDepthM = 0.5f;
+        private const float FrontOverhangM = 0.7f;
+        private const float SensorBottomY = 0.8f;
+        private const float SensorHeightM = 3f;
+        private const float LightGroupJunctionM = 40f;
+        private const float SamePhaseDot = 0.7f;
 
         private const float TileSizeM = 200f;
         private const float GroundSizeM = 2200f;
@@ -84,10 +101,11 @@ namespace PermisVR.Editor.Map
             var markingTiles = new Dictionary<Vector2Int, MeshBuilder>();
             var buildingTiles = new Dictionary<Vector2Int, MeshBuilder>();
 
+            var session = EnsureExamSession();
             BuildGround(root);
             BuildRoads(data, roadTiles, sidewalkTiles, markingTiles);
             BuildBuildings(data, buildingTiles);
-            var signCount = BuildSigns(root, data, markingTiles);
+            var signCount = BuildSigns(root, data, markingTiles, session);
 
             EmitTiles(root, "Roads", roadTiles, MapMaterialLibrary.Get("Road", new Color(0.2f, 0.2f, 0.22f)), false);
             EmitTiles(root, "Sidewalks", sidewalkTiles, MapMaterialLibrary.Get("Sidewalk", new Color(0.62f, 0.62f, 0.6f)), true);
@@ -97,6 +115,7 @@ namespace PermisVR.Editor.Map
             PlaceCarAtStart(data);
             ConfigureView();
             AddAttribution();
+            AddFaultDisplay(session);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -106,6 +125,49 @@ namespace PermisVR.Editor.Map
             Debug.Log($"ArgenteuilMapImporter: {data.roads.Length} roads, {data.buildings.Length} buildings, " +
                       $"{signCount} signs/markings imported into {M2ScenePath}. Sign directions are heuristic: " +
                       "verify each junction against street-level imagery before using it on a route.");
+        }
+
+        // Editor-time test placement (not a runtime teleport): puts the car in the lane before the
+        // junction nearest the start point, facing it. Re-run Import or "Exam Start" to undo.
+        [MenuItem("PermisVR/Map/Test Position/Before Nearest STOP")]
+        public static void MoveCarBeforeNearestStop() => MoveCarBefore("StopApproach_", 30f);
+
+        [MenuItem("PermisVR/Map/Test Position/Before Nearest Traffic Light")]
+        public static void MoveCarBeforeNearestLight() => MoveCarBefore("LightLine_", 40f);
+
+        [MenuItem("PermisVR/Map/Test Position/Exam Start")]
+        public static void MoveCarToExamStart()
+        {
+            PlaceCarAtStart(JsonUtility.FromJson<MapData>(File.ReadAllText(MapJsonPath)));
+            SaveActiveScene();
+        }
+
+        private static void MoveCarBefore(string sensorPrefix, float distanceM)
+        {
+            var car = GameObject.Find("Car");
+            var target = Object.FindObjectsByType<ExamTriggerSensor>(FindObjectsSortMode.None)
+                .Where(s => s.name.StartsWith(sensorPrefix))
+                .OrderBy(s => new Vector2(s.transform.position.x, s.transform.position.z).sqrMagnitude)
+                .FirstOrDefault();
+            if (car == null || target == null)
+            {
+                Debug.LogError($"ArgenteuilMapImporter: need 'Car' and a '{sensorPrefix}*' sensor; run Import Argenteuil first.");
+                return;
+            }
+
+            var forward = target.transform.forward;
+            var position = target.transform.position - forward * distanceM;
+            position.y = car.transform.position.y;
+            car.transform.SetPositionAndRotation(position, Quaternion.LookRotation(forward, Vector3.up));
+            SaveActiveScene();
+            Debug.Log($"ArgenteuilMapImporter: car placed {distanceM} m before {target.name}.");
+        }
+
+        private static void SaveActiveScene()
+        {
+            var scene = SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
         }
 
         private static MapOverrides LoadOverrides()
@@ -372,11 +434,16 @@ namespace PermisVR.Editor.Map
 
         private static Vector3 RoofPoint(Vector2 p, float height) => new(p.x, height, p.y);
 
-        private static int BuildSigns(Transform root, MapData data, Dictionary<Vector2Int, MeshBuilder> markingTiles)
+        private static int BuildSigns(Transform root, MapData data, Dictionary<Vector2Int, MeshBuilder> markingTiles,
+            ExamSession session)
         {
             var signsRoot = new GameObject("Signs").transform;
             signsRoot.SetParent(root, false);
+            var zonesRoot = new GameObject("ExamZones").transform;
+            zonesRoot.SetParent(root, false);
             var junctions = data.intersections.Select(j => j.position.ToVector3(0f)).ToList();
+            var timing = LoadOrCreateAsset<TrafficLightTiming>(TrafficTimingPath);
+            var phaseReferenceByJunction = new Dictionary<int, Vector3>();
             var placed = 0;
 
             foreach (var sign in data.signs)
@@ -393,6 +460,10 @@ namespace PermisVR.Editor.Map
                 var right = MapGeometry.Right(travel);
                 var markings = TileFor(markingTiles, onRoad);
 
+                // Zones cover only the lane the sign applies to (the right half of a two-way road).
+                var laneCenter = right * (road.oneWay ? 0f : halfWidth * 0.5f);
+                var laneWidth = road.oneWay ? road.widthM : halfWidth;
+
                 switch (sign.type)
                 {
                     case "crossing":
@@ -401,6 +472,12 @@ namespace PermisVR.Editor.Map
                     case "stop":
                         AddStopLine(markings, onRoad, travel, road);
                         CreateStopSign(signsRoot, sign, onRoad + right * (halfWidth + SignEdgeOffsetM), travel);
+                        CreateSensor(zonesRoot, session, $"StopApproach_{sign.osmId}",
+                            onRoad - travel * (StopZoneLengthM * 0.5f) + laneCenter, travel, laneWidth, StopZoneLengthM,
+                            ExamEventType.StopZoneEnter, $"stop_{sign.osmId}", null);
+                        CreateSensor(zonesRoot, session, $"StopLine_{sign.osmId}",
+                            onRoad + travel * (LineSensorDepthM * 0.5f) + laneCenter, travel, laneWidth, LineSensorDepthM,
+                            ExamEventType.StopZoneExit, $"stop_{sign.osmId}", null);
                         break;
                     case "give_way":
                         AddGiveWayLine(markings, onRoad, travel, road);
@@ -410,7 +487,13 @@ namespace PermisVR.Editor.Map
                         // OSM often puts the signal node in the junction itself; set the line back from it.
                         var stopAt = onRoad - travel * TrafficLightSetbackM;
                         AddStopLine(markings, stopAt, travel, road);
-                        CreateTrafficLight(signsRoot, sign, stopAt + right * (halfWidth + SignEdgeOffsetM), travel);
+                        var phaseOffsetS = PhaseOffset(position, travel, junctions, phaseReferenceByJunction, timing);
+                        var light = CreateTrafficLight(signsRoot, sign, stopAt + right * (halfWidth + SignEdgeOffsetM),
+                            travel, timing, phaseOffsetS);
+                        // Sensor starts FrontOverhangM past the line so it fires when the front axle crosses.
+                        CreateSensor(zonesRoot, session, $"LightLine_{sign.osmId}",
+                            stopAt + travel * (FrontOverhangM + LineSensorDepthM * 0.5f) + laneCenter, travel, laneWidth,
+                            LineSensorDepthM, ExamEventType.StopLineCrossed, $"light_{sign.osmId}", light);
                         break;
                     default:
                         continue;
@@ -525,7 +608,7 @@ namespace PermisVR.Editor.Map
             return go.transform;
         }
 
-        private static void CreatePart(PrimitiveType type, Transform parent, Vector3 position, Vector3 scale,
+        private static Renderer CreatePart(PrimitiveType type, Transform parent, Vector3 position, Vector3 scale,
             Quaternion rotation, Material material)
         {
             var part = GameObject.CreatePrimitive(type);
@@ -534,7 +617,9 @@ namespace PermisVR.Editor.Map
             part.transform.localPosition = position;
             part.transform.localRotation = rotation;
             part.transform.localScale = scale;
-            part.GetComponent<Renderer>().sharedMaterial = material;
+            var renderer = part.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            return renderer;
         }
 
         private static void CreateLabel(Transform parent, string text, Vector3 position, Color color, float characterSize)
@@ -577,18 +662,157 @@ namespace PermisVR.Editor.Map
             CreateLabel(root, "CÉDEZ LE\nPASSAGE", new Vector3(0f, 2.4f, -0.04f), new Color(0.8f, 0.05f, 0.05f), 0.008f);
         }
 
-        private static void CreateTrafficLight(Transform parent, MapSign sign, Vector3 position, Vector3 travel)
+        private static TrafficLight CreateTrafficLight(Transform parent, MapSign sign, Vector3 position, Vector3 travel,
+            TrafficLightTiming timing, float phaseOffsetS)
         {
             var root = CreateSignRoot(parent, $"TrafficLight_{sign.osmId}", position, travel);
+            var off = MapMaterialLibrary.Get("LampOff", new Color(0.15f, 0.15f, 0.15f));
             CreatePart(PrimitiveType.Cylinder, root, new Vector3(0f, 1.5f, 0f), new Vector3(0.1f, 1.5f, 0.1f), Quaternion.identity, Post);
             CreatePart(PrimitiveType.Cube, root, new Vector3(0f, 3.4f, 0f), new Vector3(0.35f, 0.95f, 0.25f), Quaternion.identity,
                 MapMaterialLibrary.Get("LightHead", new Color(0.08f, 0.08f, 0.08f)));
-            CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.7f, -0.13f), Vector3.one * 0.22f, Quaternion.identity,
-                MapMaterialLibrary.Get("LampRed", new Color(1f, 0.1f, 0.1f)));
-            CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.4f, -0.13f), Vector3.one * 0.22f, Quaternion.identity,
-                MapMaterialLibrary.Get("LampAmber", new Color(1f, 0.65f, 0f)));
-            CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.1f, -0.13f), Vector3.one * 0.22f, Quaternion.identity,
-                MapMaterialLibrary.Get("LampGreen", new Color(0.1f, 0.9f, 0.2f)));
+            var red = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.7f, -0.13f), Vector3.one * 0.22f, Quaternion.identity, off);
+            var amber = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.4f, -0.13f), Vector3.one * 0.22f, Quaternion.identity, off);
+            var green = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.1f, -0.13f), Vector3.one * 0.22f, Quaternion.identity, off);
+
+            var light = root.gameObject.AddComponent<TrafficLight>();
+            var so = new SerializedObject(light);
+            so.FindProperty("_timing").objectReferenceValue = timing;
+            so.FindProperty("_phaseOffsetS").floatValue = phaseOffsetS;
+            so.FindProperty("_redLamp").objectReferenceValue = red;
+            so.FindProperty("_amberLamp").objectReferenceValue = amber;
+            so.FindProperty("_greenLamp").objectReferenceValue = green;
+            so.FindProperty("_redOn").objectReferenceValue = MapMaterialLibrary.Get("LampRed", new Color(1f, 0.1f, 0.1f));
+            so.FindProperty("_amberOn").objectReferenceValue = MapMaterialLibrary.Get("LampAmber", new Color(1f, 0.65f, 0f));
+            so.FindProperty("_greenOn").objectReferenceValue = MapMaterialLibrary.Get("LampGreen", new Color(0.1f, 0.9f, 0.2f));
+            so.FindProperty("_off").objectReferenceValue = off;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return light;
+        }
+
+        /// Lights at the same junction share a phase when their approaches are parallel (incl.
+        /// opposite), and get the other half of the cycle when they cross.
+        private static float PhaseOffset(Vector3 position, Vector3 travel, List<Vector3> junctions,
+            Dictionary<int, Vector3> referenceByJunction, TrafficLightTiming timing)
+        {
+            var junction = NearestIndex(junctions, position, LightGroupJunctionM);
+            if (junction < 0)
+            {
+                return 0f;
+            }
+
+            if (!referenceByJunction.TryGetValue(junction, out var reference))
+            {
+                referenceByJunction[junction] = travel;
+                return 0f;
+            }
+
+            return Mathf.Abs(Vector3.Dot(reference, travel)) >= SamePhaseDot ? 0f : timing.HalfCycleS;
+        }
+
+        private static int NearestIndex(List<Vector3> points, Vector3 position, float maxDistanceM)
+        {
+            var best = -1;
+            var bestDistance = maxDistanceM;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var d = Vector3.Distance(points[i], position);
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    best = i;
+                }
+            }
+
+            return best;
+        }
+
+        private static void CreateSensor(Transform parent, ExamSession session, string name, Vector3 groundCenter,
+            Vector3 travel, float widthM, float lengthM, ExamEventType eventType, string zoneId, TrafficLight signal)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.SetPositionAndRotation(
+                new Vector3(groundCenter.x, SensorBottomY + SensorHeightM * 0.5f, groundCenter.z),
+                Quaternion.LookRotation(travel, Vector3.up));
+
+            var box = go.AddComponent<BoxCollider>();
+            box.isTrigger = true;
+            box.size = new Vector3(widthM, SensorHeightM, lengthM);
+
+            var so = new SerializedObject(go.AddComponent<ExamTriggerSensor>());
+            so.FindProperty("_session").objectReferenceValue = session;
+            so.FindProperty("_eventType").enumValueIndex = (int)eventType;
+            so.FindProperty("_zoneId").stringValue = zoneId;
+            so.FindProperty("_forwardOnly").boolValue = true;
+            so.FindProperty("_signal").objectReferenceValue = signal;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static T LoadOrCreateAsset<T>(string path) where T : ScriptableObject
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset == null)
+            {
+                asset = ScriptableObject.CreateInstance<T>();
+                AssetDatabase.CreateAsset(asset, path);
+            }
+
+            return asset;
+        }
+
+        /// The session lives outside Map_Generated so re-importing the map doesn't destroy it.
+        private static ExamSession EnsureExamSession()
+        {
+            var session = Object.FindFirstObjectByType<ExamSession>();
+            if (session == null)
+            {
+                session = new GameObject("ExamSession").AddComponent<ExamSession>();
+            }
+
+            var so = new SerializedObject(session);
+            so.FindProperty("_car").objectReferenceValue = Object.FindFirstObjectByType<CarController>();
+            so.FindProperty("_stopSignConfig").objectReferenceValue = LoadOrCreateAsset<StopSignRuleConfigAsset>(StopSignConfigPath);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return session;
+        }
+
+        private static void AddFaultDisplay(ExamSession session)
+        {
+            var car = GameObject.Find("Car");
+            var cockpit = car != null ? car.transform.Find("Cockpit") : null;
+            if (cockpit == null)
+            {
+                return;
+            }
+
+            var existing = cockpit.Find("FaultDisplay");
+            var go = existing != null ? existing.gameObject : new GameObject("FaultDisplay");
+            var text = go.GetComponent<TextMesh>();
+            if (text == null)
+            {
+                go.transform.SetParent(cockpit, false);
+                // Above the wheel, in the lower windscreen, so it doesn't hide the road.
+                go.transform.localPosition = new Vector3(0f, 0.2f, 0.7f);
+                var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                text = go.AddComponent<TextMesh>();
+                text.font = font;
+                text.fontSize = 100;
+                text.characterSize = 0.003f;
+                text.anchor = TextAnchor.MiddleCenter;
+                text.alignment = TextAlignment.Center;
+                go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            }
+
+            var display = go.GetComponent<FaultDisplay>();
+            if (display == null)
+            {
+                display = go.AddComponent<FaultDisplay>();
+            }
+
+            var so = new SerializedObject(display);
+            so.FindProperty("_session").objectReferenceValue = session;
+            so.FindProperty("_text").objectReferenceValue = text;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// The start address is the world origin; the car goes in the right-hand lane there (France drives on the right).

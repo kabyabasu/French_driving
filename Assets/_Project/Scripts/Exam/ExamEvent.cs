@@ -6,12 +6,14 @@ namespace PermisVR.Exam
         public readonly ExamEventType Type;
         public readonly string ZoneId;
         public readonly VehicleSnapshot Vehicle;
+        public readonly SignalState Signal;
 
-        public ExamEvent(ExamEventType type, VehicleSnapshot vehicle, string zoneId = null)
+        public ExamEvent(ExamEventType type, VehicleSnapshot vehicle, string zoneId = null, SignalState signal = SignalState.None)
         {
             Type = type;
             Vehicle = vehicle;
             ZoneId = zoneId;
+            Signal = signal;
         }
     }
 }

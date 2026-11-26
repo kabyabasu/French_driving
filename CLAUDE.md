@@ -211,6 +211,7 @@ Keep these values in data, not code. **Verify against the official Sécurité ro
 - [x] M1 Drive a car in VR on a flat test plane (seated, controllers as wheel)
 - [x] M2 Argenteuil starter area: OSM pipeline, roads, buildings and signs within ~1 km of the start point
 - [ ] M3 First rules on real Argenteuil intersections (STOP, lights, crossings, priorité à droite) + tests
+  - Done: STOP and red light graded live (exam zones from the importer, cycling lights). Crossings and priorité à droite need pedestrians/traffic (M6); amber not judged yet.
 - [ ] M4 ScoreSheet + results screen styled like the CEPC grid
 - [ ] M5 Real exam route loop(s) from the start point + examiner voice instructions
 - [ ] M6 AI traffic and pedestrians, roundabouts

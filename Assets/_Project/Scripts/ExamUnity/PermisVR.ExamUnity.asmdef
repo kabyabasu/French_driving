@@ -2,7 +2,9 @@
     "name": "PermisVR.ExamUnity",
     "rootNamespace": "PermisVR.ExamUnity",
     "references": [
-        "PermisVR.Exam"
+        "PermisVR.Exam",
+        "PermisVR.Vehicle",
+        "PermisVR.Traffic"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

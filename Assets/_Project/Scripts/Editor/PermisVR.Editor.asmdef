@@ -7,6 +7,7 @@
         "PermisVR.Vehicle",
         "PermisVR.Input",
         "PermisVR.UI",
+        "PermisVR.Traffic",
         "Unity.InputSystem",
         "Unity.XR.OpenXR"
     ],
