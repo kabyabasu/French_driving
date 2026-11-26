@@ -69,7 +69,7 @@ namespace PermisVR.Exam.Tests.Rules
         }
 
         [Test]
-        public void Fault_IsScoredUnderReadTheRoad_AndRecordsWhere()
+        public void Fault_IsScoredUnderApplyRegulations_AndRecordsWhere()
         {
             var rule = NewRule();
             var faults = new List<Fault>();
@@ -79,7 +79,7 @@ namespace PermisVR.Exam.Tests.Rules
             rule.HandleEvent(new ExamEvent(ExamEventType.StopZoneExit,
                 new VehicleSnapshot(3f, 18f, 0f, 0f, positionX: 120f, positionZ: -40f), "stop_1"));
 
-            Assert.AreEqual(ExamCriteria.ReadTheRoad, faults[0].Criterion);
+            Assert.AreEqual(ExamCriteria.ApplyRegulations, faults[0].Criterion);
             Assert.AreEqual(3f, faults[0].TimeS);
             Assert.AreEqual(120f, faults[0].PositionX);
             Assert.AreEqual(-40f, faults[0].PositionZ);

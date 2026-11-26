@@ -4,7 +4,9 @@
     "references": [
         "PermisVR.Vehicle",
         "PermisVR.Exam",
-        "PermisVR.ExamUnity"
+        "PermisVR.ExamUnity",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

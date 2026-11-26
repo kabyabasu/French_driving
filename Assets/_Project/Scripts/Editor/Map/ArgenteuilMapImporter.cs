@@ -116,6 +116,7 @@ namespace PermisVR.Editor.Map
             ConfigureView();
             AddAttribution();
             AddFaultDisplay(session);
+            ExamResultsSetup.Ensure(session);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);

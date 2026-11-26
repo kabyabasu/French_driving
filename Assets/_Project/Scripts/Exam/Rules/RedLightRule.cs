@@ -16,7 +16,7 @@ namespace PermisVR.Exam.Rules
                 return;
             }
 
-            FaultRaised?.Invoke(Fault.At(evt.Vehicle, RuleId, ExamCriteria.ReadTheRoad,
+            FaultRaised?.Invoke(Fault.At(evt.Vehicle, RuleId, ExamCriteria.ApplyRegulations,
                 FaultSeverity.Eliminatory, "Franchissement d'un feu rouge"));
         }
     }

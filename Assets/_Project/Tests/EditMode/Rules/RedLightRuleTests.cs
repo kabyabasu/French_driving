@@ -29,7 +29,7 @@ namespace PermisVR.Exam.Tests.Rules
             Assert.That(faults, Has.Count.EqualTo(1));
             Assert.AreEqual("red_light", faults[0].RuleId);
             Assert.AreEqual(FaultSeverity.Eliminatory, faults[0].Severity);
-            Assert.AreEqual(ExamCriteria.ReadTheRoad, faults[0].Criterion);
+            Assert.AreEqual(ExamCriteria.ApplyRegulations, faults[0].Criterion);
         }
 
         [Test]

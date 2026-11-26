@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ccdb6d1a31174584acbc3da270b518d, type: 3}
+  m_Name: CepcGrid
+  m_EditorClassIdentifier: PermisVR.ExamUnity::PermisVR.ExamUnity.Config.CepcGridAsset
+  criteria:
+  - id: verifications_premiers_secours
+    labelFr: "V\xE9rifications et questions (s\xE9curit\xE9, premiers secours)"
+    familyFr: "Conna\xEEtre et ma\xEEtriser son v\xE9hicule"
+    maxPoints: 3
+    isBonus: 0
+    isEvaluated: 0
+  - id: connaitre_utiliser_commandes
+    labelFr: "Conna\xEEtre et utiliser les commandes"
+    familyFr: "Conna\xEEtre et ma\xEEtriser son v\xE9hicule"
+    maxPoints: 4
+    isBonus: 0
+    isEvaluated: 0
+  - id: prendre_information
+    labelFr: Prendre l'information
+    familyFr: "Appr\xE9hender la route"
+    maxPoints: 3
+    isBonus: 0
+    isEvaluated: 1
+  - id: adapter_allure
+    labelFr: Adapter son allure aux situations
+    familyFr: "Appr\xE9hender la route"
+    maxPoints: 3
+    isBonus: 0
+    isEvaluated: 0
+  - id: appliquer_reglementation
+    labelFr: "Appliquer la r\xE9glementation"
+    familyFr: "Appr\xE9hender la route"
+    maxPoints: 3
+    isBonus: 0
+    isEvaluated: 1
+  - id: communiquer
+    labelFr: Communiquer avec les autres usagers
+    familyFr: Circuler dans des conditions difficiles et partager la route
+    maxPoints: 3
+    isBonus: 0
+    isEvaluated: 0
+  - id: partager_chaussee
+    labelFr: "Partager la chauss\xE9e"
+    familyFr: Circuler dans des conditions difficiles et partager la route
+    maxPoints: 3
+    isBonus: 0
+    isEvaluated: 0
+  - id: espaces_securite
+    labelFr: "Maintenir des espaces de s\xE9curit\xE9"
+    familyFr: Circuler dans des conditions difficiles et partager la route
+    maxPoints: 3
+    isBonus: 0
+    isEvaluated: 0
+  - id: conduite_autonome
+    labelFr: Conduite autonome
+    familyFr: "Pratiquer une conduite autonome, s\xFBre et \xE9conomique"
+    maxPoints: 2
+    isBonus: 0
+    isEvaluated: 0
+  - id: conduite_economique
+    labelFr: "Conduite \xE9conomique et respectueuse de l'environnement (bonus)"
+    familyFr: "Pratiquer une conduite autonome, s\xFBre et \xE9conomique"
+    maxPoints: 1
+    isBonus: 1
+    isEvaluated: 0
+  - id: courtoisie
+    labelFr: Courtoisie (bonus)
+    familyFr: "Pratiquer une conduite autonome, s\xFBre et \xE9conomique"
+    maxPoints: 1
+    isBonus: 1
+    isEvaluated: 0
+  passThresholdPoints: 20
+  minorFaultPenaltyPoints: 1

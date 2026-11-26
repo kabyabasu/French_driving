@@ -67,7 +67,7 @@ namespace PermisVR.Exam.Rules
 
             if (!_stoppedZoneIds.Remove(evt.ZoneId))
             {
-                FaultRaised?.Invoke(Fault.At(evt.Vehicle, RuleId, ExamCriteria.ReadTheRoad,
+                FaultRaised?.Invoke(Fault.At(evt.Vehicle, RuleId, ExamCriteria.ApplyRegulations,
                     FaultSeverity.Eliminatory, "Arrêt non marqué au STOP"));
             }
         }

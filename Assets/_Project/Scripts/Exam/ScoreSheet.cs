@@ -13,6 +13,9 @@ namespace PermisVR.Exam
 
         public event Action<Fault> FaultAdded;
 
+        /// Allocates: call when showing results, not per frame.
+        public ExamResult Grade(CepcGrid grid) => CepcGrader.Grade(grid, _faults);
+
         public void Watch(IExamRule rule)
         {
             rule.FaultRaised += OnFaultRaised;
