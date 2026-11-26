@@ -69,6 +69,15 @@ namespace PermisVR.Vehicle
             _rearRight.motorTorque = motorTorque;
 
             var brakeTorque = _input.Brake * _config.brakeTorque;
+            if (_input.Throttle <= 0f)
+            {
+                // Without this the car coasts forever: WheelColliders have almost no rolling resistance.
+                brakeTorque = Mathf.Max(brakeTorque, _config.engineBrakeTorque);
+            }
+
+            var velocity = _rigidbody.linearVelocity;
+            _rigidbody.AddForce(-_config.airDragCoefficient * velocity.magnitude * velocity);
+
             _frontLeft.brakeTorque = brakeTorque;
             _frontRight.brakeTorque = brakeTorque;
             _rearLeft.brakeTorque = brakeTorque;

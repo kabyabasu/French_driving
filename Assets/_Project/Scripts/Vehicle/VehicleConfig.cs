@@ -26,6 +26,10 @@ namespace PermisVR.Vehicle
         [Header("Powertrain")]
         public float motorTorque = 1500f;
         public float brakeTorque = 3000f;
+        [Tooltip("Per-wheel brake torque applied when the throttle is released (engine braking + rolling resistance).")]
+        public float engineBrakeTorque = 120f;
+        [Tooltip("Aerodynamic drag: force = coefficient * speed² (N per (m/s)²).")]
+        public float airDragCoefficient = 0.4f;
 
         [Header("Comfort")]
         [Tooltip("Rigidbody interpolation avoids judder; keep this on.")]
