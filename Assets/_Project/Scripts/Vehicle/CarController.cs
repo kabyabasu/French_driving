@@ -19,6 +19,8 @@ namespace PermisVR.Vehicle
         private Rigidbody _rigidbody;
         private IDrivingInput _input;
 
+        public Gear CurrentGear { get; private set; } = Gear.Drive;
+
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
@@ -47,7 +49,20 @@ namespace PermisVR.Vehicle
             _frontLeft.steerAngle = steerAngle;
             _frontRight.steerAngle = steerAngle;
 
+            // Requests while moving are dropped, not queued.
+            if (_input.TryConsumeGearRequest(out var requestedGear) && SpeedKmh < _config.gearChangeMaxSpeedKmh)
+            {
+                CurrentGear = requestedGear;
+            }
+
             var motorTorque = _input.Throttle * _config.motorTorque;
+            if (CurrentGear == Gear.Reverse)
+            {
+                motorTorque = SpeedKmh < _config.maxReverseSpeedKmh
+                    ? -motorTorque * _config.reverseTorqueFactor
+                    : 0f;
+            }
+
             _frontLeft.motorTorque = motorTorque;
             _frontRight.motorTorque = motorTorque;
             _rearLeft.motorTorque = motorTorque;
@@ -60,8 +75,6 @@ namespace PermisVR.Vehicle
             _rearRight.brakeTorque = brakeTorque;
         }
 
-        // Unity 6+ renamed Rigidbody.velocity to linearVelocity; swap this once the
-        // Unity version in CLAUDE.md is pinned, if it's 6.0 or later.
         public float SpeedKmh => _rigidbody.linearVelocity.magnitude * 3.6f;
     }
 }

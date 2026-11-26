@@ -15,7 +15,26 @@ namespace PermisVR.Input
         [SerializeField] private InputActionReference _brake;
         [SerializeField] private TriggerResponseConfig _triggerResponse;
 
+        private const string GearDriveAction = "GearDrive";
+        private const string GearReverseAction = "GearReverse";
+
+        private InputAction _gearDrive;
+        private InputAction _gearReverse;
+        private Gear? _pendingGear;
+
         public float Steer => _wheel != null ? _wheel.Steer : 0f;
+
+        public bool TryConsumeGearRequest(out Gear gear)
+        {
+            gear = _pendingGear.GetValueOrDefault();
+            if (!_pendingGear.HasValue)
+            {
+                return false;
+            }
+
+            _pendingGear = null;
+            return true;
+        }
 
         public float Throttle => ApplyTriggerResponse(_throttle);
         public float Brake => ApplyTriggerResponse(_brake);
@@ -34,6 +53,11 @@ namespace PermisVR.Input
         private void Awake()
         {
             _car.SetInputSource(this);
+
+            // Same Driving map as the throttle; looked up by name so no extra scene wiring.
+            var map = _throttle != null ? _throttle.action.actionMap : null;
+            _gearDrive = map?.FindAction(GearDriveAction);
+            _gearReverse = map?.FindAction(GearReverseAction);
         }
 
         // Actions from an .inputactions asset start disabled and read 0 until enabled. This
@@ -57,6 +81,16 @@ namespace PermisVR.Input
 
         private void Update()
         {
+            // Latched here because presses are per-frame but the car reads in FixedUpdate.
+            if (_gearDrive != null && _gearDrive.WasPressedThisFrame())
+            {
+                _pendingGear = Gear.Drive;
+            }
+            else if (_gearReverse != null && _gearReverse.WasPressedThisFrame())
+            {
+                _pendingGear = Gear.Reverse;
+            }
+
             if (_wheel != null)
             {
                 _wheel.SetCarSpeedKmh(_car.SpeedKmh);

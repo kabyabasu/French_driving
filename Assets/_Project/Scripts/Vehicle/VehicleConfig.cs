@@ -12,6 +12,13 @@ namespace PermisVR.Vehicle
         public float highSpeedSteerAngleDeg = 8f;
         public float highSpeedReferenceKmh = 80f;
 
+        [Header("Gearbox (automatic)")]
+        [Tooltip("Drive/Reverse is only accepted below this speed (CLAUDE.md: < 1 km/h).")]
+        public float gearChangeMaxSpeedKmh = 1f;
+        [Tooltip("Fraction of motorTorque available in reverse.")]
+        public float reverseTorqueFactor = 0.5f;
+        public float maxReverseSpeedKmh = 15f;
+
         [Header("Stability")]
         [Tooltip("Rigidbody center of mass, car-local. Kept low (near axle height) to resist rollover.")]
         public Vector3 centerOfMass = new(0f, -0.6f, 0f);

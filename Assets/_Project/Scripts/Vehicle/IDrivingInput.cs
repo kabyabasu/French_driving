@@ -12,5 +12,8 @@ namespace PermisVR.Vehicle
 
         /// 0 to 1.
         float Brake { get; }
+
+        /// True once per gear button press; the car decides whether the change is allowed.
+        bool TryConsumeGearRequest(out Gear gear);
     }
 }
