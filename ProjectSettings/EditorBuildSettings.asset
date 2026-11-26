@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Project/Scenes/M2_Argenteuil.unity
+    guid: c930e268274ef4c0783ba011b442b3d8
+  - enabled: 0
     path: Assets/_Project/Scenes/M1_TestPlane.unity
     guid: 72448a9ba35e74ab1894949443efb87a
   m_configObjects:

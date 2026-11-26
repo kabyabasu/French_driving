@@ -1,0 +1,6 @@
+{
+    "_comment": "Manual fixes applied after OSM by PermisVR > Map > Import Argenteuil. Use OSM ids from argenteuil_map.json. Verify signs against street-level imagery before relying on them.",
+    "removeSignOsmIds": [],
+    "addSigns": [],
+    "roadOverrides": []
+}

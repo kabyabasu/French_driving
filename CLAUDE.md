@@ -209,7 +209,7 @@ Keep these values in data, not code. **Verify against the official Sécurité ro
 
 ## Roadmap (update as milestones are done)
 - [x] M1 Drive a car in VR on a flat test plane (seated, controllers as wheel)
-- [ ] M2 Argenteuil starter area: OSM pipeline, roads, buildings and signs within ~1 km of the start point
+- [x] M2 Argenteuil starter area: OSM pipeline, roads, buildings and signs within ~1 km of the start point
 - [ ] M3 First rules on real Argenteuil intersections (STOP, lights, crossings, priorité à droite) + tests
 - [ ] M4 ScoreSheet + results screen styled like the CEPC grid
 - [ ] M5 Real exam route loop(s) from the start point + examiner voice instructions

@@ -28,6 +28,21 @@ FEATURE_TAGS = {
     "building": True,
 }
 
+# Only these columns are kept: raw OSM features carry hundreds of tags, some
+# list-valued, which the GeoJSON writer can't serialize.
+KEPT_COLUMNS = ["element", "id", "building", "building:levels", "highway", "junction", "direction", "geometry"]
+
+
+def _slim(features):
+    features = features.reset_index()
+    # osmnx 1.x names the index levels element_type/osmid; 2.x uses element/id.
+    features = features.rename(columns={"element_type": "element", "osmid": "id"})
+    features = features[[c for c in KEPT_COLUMNS if c in features.columns]].copy()
+    for column in features.columns:
+        if column != "geometry":
+            features[column] = features[column].map(lambda v: None if v is None or v != v else str(v))
+    return features
+
 
 def fetch(address: str, radius_m: float) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -40,13 +55,18 @@ def fetch(address: str, radius_m: float) -> None:
     ox.save_graphml(graph, graph_path)
     print(f"Saved street graph to {graph_path}")
 
-    features = ox.features_from_point(center_point, tags=FEATURE_TAGS, dist=radius_m)
+    features = _slim(ox.features_from_point(center_point, tags=FEATURE_TAGS, dist=radius_m))
     features_path = CACHE_DIR / "argenteuil_features.geojson"
     features.to_file(features_path, driver="GeoJSON")
     print(f"Saved features to {features_path}")
 
     origin_path = CACHE_DIR / "origin.json"
-    origin_path.write_text(json.dumps({"address": address, "lat": center_point[0], "lon": center_point[1]}, indent=2))
+    origin_path.write_text(json.dumps({
+        "address": address,
+        "lat": center_point[0],
+        "lon": center_point[1],
+        "radiusM": radius_m,
+    }, indent=2))
     print(f"Saved origin point to {origin_path}")
 
 
