@@ -98,6 +98,7 @@ namespace PermisVR.Editor
         private static readonly string[] EvaluatedCriteria =
         {
             ExamCriteria.ApplyRegulations,
+            ExamCriteria.TakeInformation,
         };
 
         private static CepcGridAsset LoadOrCreateGrid()

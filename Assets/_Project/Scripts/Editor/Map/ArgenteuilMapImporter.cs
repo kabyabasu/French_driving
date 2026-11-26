@@ -35,6 +35,7 @@ namespace PermisVR.Editor.Map
         private const float SensorHeightM = 3f;
         private const float LightGroupJunctionM = 40f;
         private const float SamePhaseDot = 0.7f;
+        private const float JunctionZoneSizeM = 24f;
 
         private const float TileSizeM = 200f;
         private const float GroundSizeM = 2200f;
@@ -106,6 +107,7 @@ namespace PermisVR.Editor.Map
             BuildRoads(data, roadTiles, sidewalkTiles, markingTiles);
             BuildBuildings(data, buildingTiles);
             var signCount = BuildSigns(root, data, markingTiles, session);
+            BuildJunctionZones(root, data, session);
 
             EmitTiles(root, "Roads", roadTiles, MapMaterialLibrary.Get("Road", new Color(0.2f, 0.2f, 0.22f)), false);
             EmitTiles(root, "Sidewalks", sidewalkTiles, MapMaterialLibrary.Get("Sidewalk", new Color(0.62f, 0.62f, 0.6f)), true);
@@ -116,6 +118,7 @@ namespace PermisVR.Editor.Map
             ConfigureView();
             AddAttribution();
             AddFaultDisplay(session);
+            MirrorSetup.Ensure(session);
             ExamResultsSetup.Ensure(session);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -727,8 +730,22 @@ namespace PermisVR.Editor.Map
             return best;
         }
 
+        /// One trigger per junction node, reporting entry and exit (mirror rules only judge turns inside one).
+        private static void BuildJunctionZones(Transform root, MapData data, ExamSession session)
+        {
+            var zonesRoot = new GameObject("JunctionZones").transform;
+            zonesRoot.SetParent(root, false);
+            foreach (var junction in data.intersections)
+            {
+                CreateSensor(zonesRoot, session, $"Junction_{junction.osmId}", junction.position.ToVector3(0f), Vector3.forward,
+                    JunctionZoneSizeM, JunctionZoneSizeM, ExamEventType.IntersectionEnter, $"junction_{junction.osmId}", null,
+                    forwardOnly: false, exitEvent: ExamEventType.IntersectionExit);
+            }
+        }
+
         private static void CreateSensor(Transform parent, ExamSession session, string name, Vector3 groundCenter,
-            Vector3 travel, float widthM, float lengthM, ExamEventType eventType, string zoneId, TrafficLight signal)
+            Vector3 travel, float widthM, float lengthM, ExamEventType eventType, string zoneId, TrafficLight signal,
+            bool forwardOnly = true, ExamEventType? exitEvent = null)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -744,8 +761,10 @@ namespace PermisVR.Editor.Map
             so.FindProperty("_session").objectReferenceValue = session;
             so.FindProperty("_eventType").enumValueIndex = (int)eventType;
             so.FindProperty("_zoneId").stringValue = zoneId;
-            so.FindProperty("_forwardOnly").boolValue = true;
+            so.FindProperty("_forwardOnly").boolValue = forwardOnly;
             so.FindProperty("_signal").objectReferenceValue = signal;
+            so.FindProperty("_publishOnExit").boolValue = exitEvent.HasValue;
+            so.FindProperty("_exitEventType").enumValueIndex = exitEvent.HasValue ? (int)exitEvent.Value : 0;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

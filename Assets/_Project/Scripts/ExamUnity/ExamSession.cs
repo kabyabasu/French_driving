@@ -12,6 +12,7 @@ namespace PermisVR.ExamUnity
     {
         [SerializeField] private CarController _car;
         [SerializeField] private StopSignRuleConfigAsset _stopSignConfig;
+        [SerializeField] private MirrorRulesConfigAsset _mirrorRulesConfig;
 
         private readonly ExamEventBus _bus = new();
         private Rigidbody _carBody;
@@ -24,6 +25,18 @@ namespace PermisVR.ExamUnity
             _carBody = _car.GetComponent<Rigidbody>();
             Register(new StopSignRule(_stopSignConfig.ToConfig()));
             Register(new RedLightRule());
+
+            if (_mirrorRulesConfig == null)
+            {
+                Debug.LogError("ExamSession: no MirrorRulesConfig assigned, mirror checks are NOT graded. " +
+                               "Run PermisVR > Scene > Add Mirrors.");
+                return;
+            }
+
+            var mirrorRules = _mirrorRulesConfig.ToConfig();
+            Register(new MirrorBeforeTurnRule(mirrorRules));
+            Register(new MirrorBeforePullOutRule(mirrorRules));
+            Register(new MirrorBeforeBrakingRule(mirrorRules));
         }
 
         private void Register(IExamRule rule)

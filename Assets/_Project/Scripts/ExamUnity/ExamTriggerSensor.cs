@@ -15,6 +15,9 @@ namespace PermisVR.ExamUnity
         [SerializeField] private bool _forwardOnly = true;
         [Tooltip("Optional: the light whose state is attached to the event.")]
         [SerializeField] private TrafficLight _signal;
+        [Tooltip("Optional: also publish an event when the car has fully left (e.g. IntersectionExit).")]
+        [SerializeField] private bool _publishOnExit;
+        [SerializeField] private ExamEventType _exitEventType;
 
         // The car has several colliders; only the first one entering counts.
         private int _carCollidersInside;
@@ -41,9 +44,15 @@ namespace PermisVR.ExamUnity
 
         private void OnTriggerExit(Collider other)
         {
-            if (other.attachedRigidbody != null && other.attachedRigidbody == _session.CarBody)
+            if (other.attachedRigidbody == null || other.attachedRigidbody != _session.CarBody || _carCollidersInside == 0)
             {
-                _carCollidersInside = Mathf.Max(0, _carCollidersInside - 1);
+                return;
+            }
+
+            _carCollidersInside--;
+            if (_carCollidersInside == 0 && _publishOnExit)
+            {
+                _session.Publish(_exitEventType, _zoneId, SignalState.None);
             }
         }
     }
