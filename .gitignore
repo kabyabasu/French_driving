@@ -55,6 +55,11 @@ crashlytics-build.properties
 /[Aa]ssets/StreamingAssets/aa.meta
 /[Aa]ssets/StreamingAssets/aa/*
 
+## Unity Android build scratch ##
+.utmp/
+*.gradle.backup
+*.gradle.backup.meta
+
 ## Test results ##
 TestResults/
 
