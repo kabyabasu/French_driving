@@ -1,0 +1,13 @@
+{
+    "name": "PermisVR.Comfort",
+    "rootNamespace": "PermisVR.Comfort",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}

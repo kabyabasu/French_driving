@@ -47,6 +47,7 @@ Assets/_Project/
     Traffic/     # AI cars, pedestrians, traffic lights
     Route/       # Pure C#: route definition, tracker, examiner scheduler (noEngineReferences)
     UI/          # In-car HUD, results screen (CEPC-style grid)
+    Comfort/     # Motion-sickness measures: stabilised cockpit, turn vignette
     Editor/      # Build tools, editor helpers
   Data/          # ScriptableObjects: grading grid, thresholds, routes
     Maps/        # Generated map JSON + manual overrides per city
@@ -215,7 +216,9 @@ Keep these values in data, not code. **Verify against the official Sécurité ro
 - Never move or rotate the camera independently of the car. No camera shake, no head bob.
 - Seated play; the cockpit is always visible as a stable frame of reference.
 - Smooth acceleration curves, no teleports. Recenter view on demand.
-- Optional comfort vignette at high angular velocity.
+- Comfort vignette at high angular velocity: `ComfortVignette` darkens the view edges from the car's yaw rate (10°/s start, 40°/s full), never from head turns. On by default (`Data/ComfortConfig.asset`).
+- Stabilised cockpit: `CockpitStabilizer` makes the car's visual-only children (Cockpit with the XR rig, Hatchback, Mirrors) follow its position and heading but not suspension pitch, roll or bounce (`pitchRollFollow` 0, height smoothed). Physics is unchanged. The map is flat, so no real slope is hidden; revisit if hills are added.
+- Set up with `PermisVR > Scene > Add Comfort (Stabilised Cockpit + Turn Vignette)`. Custom shaders seen in VR must support single-pass instanced stereo (`UNITY_VERTEX_OUTPUT_STEREO`), or they render in one eye only.
 
 ## Working rules for Claude
 - Read the relevant existing scripts before changing anything and follow their patterns.

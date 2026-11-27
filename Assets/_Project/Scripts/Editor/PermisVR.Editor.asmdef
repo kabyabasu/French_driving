@@ -4,6 +4,7 @@
     "references": [
         "PermisVR.Exam",
         "PermisVR.Route",
+        "PermisVR.Comfort",
         "PermisVR.ExamUnity",
         "PermisVR.Vehicle",
         "PermisVR.Input",
