@@ -14,6 +14,8 @@ namespace PermisVR.Editor.Map
         private readonly List<Vector3> _normals = new();
         private readonly List<Vector2> _uvs = new();
         private readonly List<int> _triangles = new();
+        private readonly List<Color32> _colors = new();
+        private bool _hasColors;
 
         public bool IsEmpty => _triangles.Count == 0;
 
@@ -62,6 +64,59 @@ namespace PermisVR.Editor.Map
             _vertices.Add(position);
             _normals.Add(normal);
             _uvs.Add(WorldUv(position, normal));
+            _colors.Add(new Color32(255, 255, 255, 255));
+        }
+
+        /// Quad with explicit UVs and a vertex colour (per-face data for custom shaders).
+        /// a-b-c-d go around the quad's edge; uvs follow the same order.
+        public void AddQuad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector2 uvA, Vector2 uvB, Vector2 uvC, Vector2 uvD,
+            Vector3 facing, Color32 color)
+        {
+            if (Vector3.Dot(Vector3.Cross(b - a, c - a), facing) < 0f)
+            {
+                (b, d) = (d, b);
+                (uvB, uvD) = (uvD, uvB);
+            }
+
+            var start = _vertices.Count;
+            var normal = facing.normalized;
+            AddVertex(a, normal, uvA, color);
+            AddVertex(b, normal, uvB, color);
+            AddVertex(c, normal, uvC, color);
+            AddVertex(d, normal, uvD, color);
+            _triangles.Add(start);
+            _triangles.Add(start + 1);
+            _triangles.Add(start + 2);
+            _triangles.Add(start);
+            _triangles.Add(start + 2);
+            _triangles.Add(start + 3);
+        }
+
+        public void AddTriangle(Vector3 a, Vector3 b, Vector3 c, Vector2 uvA, Vector2 uvB, Vector2 uvC, Vector3 facing, Color32 color)
+        {
+            if (Vector3.Dot(Vector3.Cross(b - a, c - a), facing) < 0f)
+            {
+                (b, c) = (c, b);
+                (uvB, uvC) = (uvC, uvB);
+            }
+
+            var start = _vertices.Count;
+            var normal = facing.normalized;
+            AddVertex(a, normal, uvA, color);
+            AddVertex(b, normal, uvB, color);
+            AddVertex(c, normal, uvC, color);
+            _triangles.Add(start);
+            _triangles.Add(start + 1);
+            _triangles.Add(start + 2);
+        }
+
+        private void AddVertex(Vector3 position, Vector3 normal, Vector2 uv, Color32 color)
+        {
+            _vertices.Add(position);
+            _normals.Add(normal);
+            _uvs.Add(uv);
+            _colors.Add(color);
+            _hasColors = true;
         }
 
         private static Vector2 WorldUv(Vector3 position, Vector3 normal)
@@ -95,6 +150,10 @@ namespace PermisVR.Editor.Map
             mesh.SetVertices(_vertices);
             mesh.SetNormals(_normals);
             mesh.SetUVs(0, _uvs);
+            if (_hasColors)
+            {
+                mesh.SetColors(_colors);
+            }
             mesh.SetTriangles(_triangles, 0);
             mesh.RecalculateBounds();
             return mesh;

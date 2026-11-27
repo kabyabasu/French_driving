@@ -62,7 +62,6 @@ namespace PermisVR.Editor.Map
         private const float AtJunctionM = 3f;
         private const float TrafficLightSetbackM = 6f;
         private const float MinBuildingAreaM2 = 4f;
-        private const float DefaultBuildingHeightM = 12f;
         private const float FogStartM = 250f;
         private const float FogEndM = 550f;
         private const float FarClipM = 600f;
@@ -110,14 +109,14 @@ namespace PermisVR.Editor.Map
                 SceneryBuilder.CoverBeyondRoadM(SidewalkWidthM));
             BuildGround(root);
             BuildRoads(data, roadTiles, sidewalkTiles, markingTiles, underpassMask);
-            BuildBuildings(data, buildingTiles);
+            FacadeBuilder.Build(data, position => TileFor(buildingTiles, position), MinBuildingAreaM2);
             var signCount = BuildSigns(root, data, markingTiles, session);
             BuildJunctionZones(root, data, session);
 
             EmitTiles(root, "Roads", roadTiles, MapMaterialLibrary.GetTextured("Road", MapTextureLibrary.Asphalt(), MapTextureLibrary.AsphaltRepeatM), false);
             EmitTiles(root, "Sidewalks", sidewalkTiles, MapMaterialLibrary.GetTextured("Sidewalk", MapTextureLibrary.Paving(), MapTextureLibrary.PavingRepeatM), true);
             EmitTiles(root, "Markings", markingTiles, MapMaterialLibrary.Get("Marking", new Color(0.95f, 0.95f, 0.92f)), false);
-            EmitTiles(root, "Buildings", buildingTiles, MapMaterialLibrary.Get("Building", new Color(0.83f, 0.77f, 0.66f)), true);
+            EmitTiles(root, "Buildings", buildingTiles, MapMaterialLibrary.GetFacade(MapTextureLibrary.FacadeAtlas()), true);
             var underpassCount = SceneryBuilder.BuildUnderpasses(root, data.underpasses, SidewalkWidthM);
             var barrierCount = SceneryBuilder.BuildBarriers(root, data.barriers);
             var treeCount = SceneryBuilder.BuildTrees(root, data.trees);
@@ -333,9 +332,13 @@ namespace PermisVR.Editor.Map
                         points[i], points[i + 1], left[i], left[i + 1], right[i + 1], right[i], Vector3.up);
                 }
 
-                if (!road.oneWay && road.lanes >= 2)
+                // Raised sidewalks and lane markings are cut back at junctions so they don't run across the crossing street.
+                var trimStart = junctions.Contains(PointKey(road.points[0])) ? JunctionTrimM : 0f;
+                var trimEnd = junctions.Contains(PointKey(road.points[road.points.Length - 1])) ? JunctionTrimM : 0f;
+                var trimmed = MapGeometry.Trim(points, trimStart, trimEnd, MinSidewalkLengthM);
+                if (trimmed != null)
                 {
-                    AddCenterDashes(markingTiles, points, mask);
+                    AddLaneLines(markingTiles, trimmed, road, mask);
                 }
 
                 if (NoSidewalkHighways.Contains(road.highway))
@@ -343,10 +346,6 @@ namespace PermisVR.Editor.Map
                     continue;
                 }
 
-                // Raised sidewalks are cut back at junctions so they don't run across the crossing street.
-                var trimStart = junctions.Contains(PointKey(road.points[0])) ? JunctionTrimM : 0f;
-                var trimEnd = junctions.Contains(PointKey(road.points[road.points.Length - 1])) ? JunctionTrimM : 0f;
-                var trimmed = MapGeometry.Trim(points, trimStart, trimEnd, MinSidewalkLengthM);
                 if (trimmed != null)
                 {
                     AddSidewalk(sidewalkTiles, trimmed, halfWidth, 1f, mask);
@@ -410,7 +409,36 @@ namespace PermisVR.Editor.Map
             }
         }
 
-        private static void AddCenterDashes(Dictionary<Vector2Int, MeshBuilder> tiles, List<Vector3> points, UnderpassMask mask)
+        /// Dashed lines between lanes: the centre line of a two-way road, and lane dividers on
+        /// multi-lane carriageways (one-way roads with 2+ lanes, two-way roads with 4+).
+        private static void AddLaneLines(Dictionary<Vector2Int, MeshBuilder> tiles, List<Vector3> points, MapRoad road, UnderpassMask mask)
+        {
+            var lanes = Mathf.Max(1, road.lanes);
+            var laneWidth = road.widthM / lanes;
+            if (road.oneWay)
+            {
+                for (var k = 1; k < lanes; k++)
+                {
+                    AddDashes(tiles, MapGeometry.Offset(points, -road.widthM * 0.5f + k * laneWidth), mask);
+                }
+
+                return;
+            }
+
+            if (lanes < 2)
+            {
+                return;
+            }
+
+            AddDashes(tiles, points, mask);
+            for (var k = 1; k < lanes / 2; k++)
+            {
+                AddDashes(tiles, MapGeometry.Offset(points, k * laneWidth), mask);
+                AddDashes(tiles, MapGeometry.Offset(points, -k * laneWidth), mask);
+            }
+        }
+
+        private static void AddDashes(Dictionary<Vector2Int, MeshBuilder> tiles, IReadOnlyList<Vector3> points, UnderpassMask mask)
         {
             var length = MapGeometry.Length(points);
             for (var distance = DashGapM * 0.5f; distance + DashLengthM <= length; distance += DashLengthM + DashGapM)
@@ -434,53 +462,6 @@ namespace PermisVR.Editor.Map
                     along.magnitude * 0.5f, LineHalfWidthM, MarkingY);
             }
         }
-
-        private static void BuildBuildings(MapData data, Dictionary<Vector2Int, MeshBuilder> tiles)
-        {
-            foreach (var building in data.buildings)
-            {
-                if (building.footprint == null || building.footprint.Length < 3)
-                {
-                    continue;
-                }
-
-                var ring = building.footprint.Select(p => new Vector2(p.x, p.z)).ToList();
-                var area = MapGeometry.SignedArea(ring);
-                if (Mathf.Abs(area) < MinBuildingAreaM2)
-                {
-                    continue;
-                }
-
-                var height = building.heightM > 0f ? building.heightM : DefaultBuildingHeightM;
-                var centroid = ring.Aggregate(Vector2.zero, (sum, p) => sum + p) / ring.Count;
-                var builder = TileFor(tiles, new Vector3(centroid.x, 0f, centroid.y));
-                var counterclockwise = area > 0f;
-
-                for (var i = 0; i < ring.Count; i++)
-                {
-                    var p = ring[i];
-                    var q = ring[(i + 1) % ring.Count];
-                    var edge = q - p;
-                    if (edge.sqrMagnitude < 1e-4f)
-                    {
-                        continue;
-                    }
-
-                    var outward = counterclockwise ? new Vector3(edge.y, 0f, -edge.x) : new Vector3(-edge.y, 0f, edge.x);
-                    builder.AddQuad(new Vector3(p.x, 0f, p.y), new Vector3(p.x, height, p.y),
-                        new Vector3(q.x, height, q.y), new Vector3(q.x, 0f, q.y), outward);
-                }
-
-                var roof = MapGeometry.Triangulate(ring);
-                for (var t = 0; t < roof.Count; t += 3)
-                {
-                    builder.AddTriangle(RoofPoint(ring[roof[t]], height), RoofPoint(ring[roof[t + 1]], height),
-                        RoofPoint(ring[roof[t + 2]], height), Vector3.up);
-                }
-            }
-        }
-
-        private static Vector3 RoofPoint(Vector2 p, float height) => new(p.x, height, p.y);
 
         private static int BuildSigns(Transform root, MapData data, Dictionary<Vector2Int, MeshBuilder> markingTiles,
             ExamSession session)

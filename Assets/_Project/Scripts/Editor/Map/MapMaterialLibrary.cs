@@ -29,6 +29,27 @@ namespace PermisVR.Editor.Map
             return material;
         }
 
+        /// Building façades and roofs: the PermisVR/Facade shader with the generated atlas.
+        public static Material GetFacade(Texture2D atlas)
+        {
+            var path = $"{MaterialsDir}/Facade.mat";
+            var shader = Shader.Find("PermisVR/Facade");
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                Directory.CreateDirectory(MaterialsDir);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.shader = shader;
+            material.mainTexture = atlas;
+            material.mainTextureScale = Vector2.one;
+            material.SetFloat("_StoreyM", MapTextureLibrary.FacadeBayM);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         /// Textured variant: the meshes carry world-space UVs in metres, so the texture repeats
         /// every repeatM metres. White tint, so the texture shows its own colours.
         public static Material GetTextured(string name, Texture2D texture, float repeatM)

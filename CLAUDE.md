@@ -52,6 +52,7 @@ Assets/_Project/
     Maps/        # Generated map JSON + manual overrides per city
     Routes/      # Generated exam routes (<id>_route.json)
   Audio/Examiner/ # Examiner voice clips, one WAV per ExaminerPhrase (generated, Git LFS)
+  Shaders/       # Facade.shader (buildings from one atlas, Built-in pipeline)
   Scenes/
   Prefabs/
   Tests/EditMode/ # Tests for Exam/ (one test file per rule)
@@ -124,8 +125,8 @@ Unity menu: PermisVR > Map > Import Argenteuil (Editor script)
 | `maxspeed=*` | Speed zone + signs where it changes | Speed rule |
 | `oneway=yes` | One-way direction | Wrong-way rule (eliminatory) |
 | Intersection with none of the above | Nothing extra | **Priorité à droite** (French default) |
-| `lanes`, `width` | Road width (default 3.25 m per lane) | Lane-position checks |
-| `building` + `building:levels` | Extruded box (3 m per level, default 4 levels) | None |
+| `lanes`, `width` | Road width (default 3.25 m per lane); dashed centre line and lane dividers, trimmed back at junctions | Lane-position checks |
+| `building` + `building:levels` | Extruded walls with façade bays (windows, shutters, shopfronts, doors, garages) and a render colour; pitched tiled roof on small rectangular houses. Untagged height: storeys guessed from the footprint (<30 m² annex 1, <150 m² pavillon 2, <400 m² 3, <1500 m² flats 4-5, larger = 7 m hall); ground-floor shops along main roads | None |
 | `tunnel=yes` on a street, or a `bridge=*` way crossing one | Underpass: deck on side walls + embankments (orange steel under rail/motorway) | None (visual) |
 | `barrier=wall/fence/hedge` | Wall/fence boxes with colliders, clipped back from streets and sidewalks | None (visual) |
 | `natural=tree/tree_row`, woods, parks, grass | Low-poly trees (scattered inside green areas) | None (visual) |
@@ -148,7 +149,7 @@ Unity menu: PermisVR > Route > Set Up Exam Route (Argenteuil Loop 1)
 OSM data can be incomplete. A missing tag does not prove there is no sign: before an intersection is used on a route, verify it against street-level imagery and fix it in the overrides file.
 
 ### Map performance
-- Merge buildings per 200 m tile; one shared façade texture atlas; no interiors.
+- Merge buildings per 200 m tile; one shared façade texture atlas (`PermisVR/Facade`: windows come from the texture, not geometry); no interiors.
 - Simple LOD boxes beyond ~300 m; fog and culling beyond ~500 m.
 - Roads and sidewalks as merged meshes per tile; signs and lights as instanced prefabs.
 
