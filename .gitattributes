@@ -35,3 +35,6 @@
 *.json text
 *.asmdef text
 *.shader text
+
+# Generated map meshes (PermisVR > Map > Import Argenteuil): large, regenerated on each import.
+Assets/_Project/Data/Maps/Generated/**/*.asset filter=lfs diff=lfs merge=lfs -text

@@ -98,6 +98,8 @@ On start (and on `RecenterSeat`), the player holds both controllers where they w
 ### Pipeline
 ```
 tools/osm/fetch_area.py  -> download OSM data for the area (cached in tools/osm/cache/, gitignored)
+                            --scenery-only: refresh only visual scenery (bridges/tunnels, walls, trees)
+                            --overpass-url: use a mirror when overpass-api.de is overloaded
 tools/osm/build_map.py   -> parse, project, export Assets/_Project/Data/Maps/argenteuil_map.json
 Unity menu: PermisVR > Map > Import Argenteuil (Editor script)
                          -> generates roads, sidewalks, buildings, signs and exam zones
@@ -120,6 +122,9 @@ Unity menu: PermisVR > Map > Import Argenteuil (Editor script)
 | Intersection with none of the above | Nothing extra | **Priorité à droite** (French default) |
 | `lanes`, `width` | Road width (default 3.25 m per lane) | Lane-position checks |
 | `building` + `building:levels` | Extruded box (3 m per level, default 4 levels) | None |
+| `tunnel=yes` on a street, or a `bridge=*` way crossing one | Underpass: deck on side walls + embankments (orange steel under rail/motorway) | None (visual) |
+| `barrier=wall/fence/hedge` | Wall/fence boxes with colliders, clipped back from streets and sidewalks | None (visual) |
+| `natural=tree/tree_row`, woods, parks, grass | Low-poly trees (scattered inside green areas) | None (visual) |
 
 OSM data can be incomplete. A missing tag does not prove there is no sign: before an intersection is used on a route, verify it against street-level imagery and fix it in the overrides file.
 

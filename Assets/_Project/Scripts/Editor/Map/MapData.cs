@@ -11,5 +11,10 @@ namespace PermisVR.Editor.Map
         public MapIntersection[] intersections;
         public MapBuilding[] buildings;
         public MapSign[] signs;
+
+        // Visual only (no exam rule reads these). Absent in older map files.
+        public MapUnderpass[] underpasses;
+        public MapBarrier[] barriers;
+        public MapTree[] trees;
     }
 }

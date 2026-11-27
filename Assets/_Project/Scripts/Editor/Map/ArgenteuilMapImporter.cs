@@ -14,7 +14,8 @@ using UnityEngine.SceneManagement;
 
 namespace PermisVR.Editor.Map
 {
-    /// Builds the Argenteuil map (ground, roads, sidewalks, markings, buildings, signs) under a
+    /// Builds the Argenteuil map (ground, roads, sidewalks, markings, buildings, signs, plus
+    /// visual-only underpasses, walls/fences and trees) under a
     /// Map_Generated root in the M2 scene, from argenteuil_map.json plus the overrides file.
     /// Everything under the root is regenerated on each import; never hand-edit it.
     public static class ArgenteuilMapImporter
@@ -46,6 +47,7 @@ namespace PermisVR.Editor.Map
         private const float SidewalkWidthM = 2f;
         private const float JunctionTrimM = 7f;
         private const float MinSidewalkLengthM = 2f;
+        private const float MaskPieceM = 2f;
         private const float LaneWidthM = 3.25f;
         private const float DashLengthM = 3f;
         private const float DashGapM = 5f;
@@ -95,6 +97,7 @@ namespace PermisVR.Editor.Map
             }
 
             RemoveRootObjects(scene, RootName, "Ground", "Markers", "Boundary");
+            GeneratedMeshStore.Reset();
             var root = new GameObject(RootName).transform;
 
             var roadTiles = new Dictionary<Vector2Int, MeshBuilder>();
@@ -103,8 +106,10 @@ namespace PermisVR.Editor.Map
             var buildingTiles = new Dictionary<Vector2Int, MeshBuilder>();
 
             var session = EnsureExamSession();
+            var underpassMask = new UnderpassMask(data.underpasses ?? new MapUnderpass[0],
+                SceneryBuilder.CoverBeyondRoadM(SidewalkWidthM));
             BuildGround(root);
-            BuildRoads(data, roadTiles, sidewalkTiles, markingTiles);
+            BuildRoads(data, roadTiles, sidewalkTiles, markingTiles, underpassMask);
             BuildBuildings(data, buildingTiles);
             var signCount = BuildSigns(root, data, markingTiles, session);
             BuildJunctionZones(root, data, session);
@@ -113,6 +118,9 @@ namespace PermisVR.Editor.Map
             EmitTiles(root, "Sidewalks", sidewalkTiles, MapMaterialLibrary.Get("Sidewalk", new Color(0.62f, 0.62f, 0.6f)), true);
             EmitTiles(root, "Markings", markingTiles, MapMaterialLibrary.Get("Marking", new Color(0.95f, 0.95f, 0.92f)), false);
             EmitTiles(root, "Buildings", buildingTiles, MapMaterialLibrary.Get("Building", new Color(0.83f, 0.77f, 0.66f)), true);
+            var underpassCount = SceneryBuilder.BuildUnderpasses(root, data.underpasses, SidewalkWidthM);
+            var barrierCount = SceneryBuilder.BuildBarriers(root, data.barriers);
+            var treeCount = SceneryBuilder.BuildTrees(root, data.trees);
 
             PlaceCarAtStart(data);
             ConfigureView();
@@ -127,7 +135,8 @@ namespace PermisVR.Editor.Map
             RegisterBuildScenes();
 
             Debug.Log($"ArgenteuilMapImporter: {data.roads.Length} roads, {data.buildings.Length} buildings, " +
-                      $"{signCount} signs/markings imported into {M2ScenePath}. Sign directions are heuristic: " +
+                      $"{signCount} signs/markings, {underpassCount} underpasses, {barrierCount} walls/fences, " +
+                      $"{treeCount} trees imported into {M2ScenePath}. Sign directions are heuristic: " +
                       "verify each junction against street-level imagery before using it on a route.");
         }
 
@@ -260,7 +269,7 @@ namespace PermisVR.Editor.Map
 
                 var go = new GameObject($"{layerName}_{tile.Key.x}_{tile.Key.y}");
                 go.transform.SetParent(layer, false);
-                var mesh = tile.Value.Build(go.name);
+                var mesh = GeneratedMeshStore.Save(tile.Value.Build(go.name));
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = material;
                 if (withCollider)
@@ -302,7 +311,8 @@ namespace PermisVR.Editor.Map
         }
 
         private static void BuildRoads(MapData data, Dictionary<Vector2Int, MeshBuilder> roadTiles,
-            Dictionary<Vector2Int, MeshBuilder> sidewalkTiles, Dictionary<Vector2Int, MeshBuilder> markingTiles)
+            Dictionary<Vector2Int, MeshBuilder> sidewalkTiles, Dictionary<Vector2Int, MeshBuilder> markingTiles,
+            UnderpassMask mask)
         {
             var junctions = new HashSet<Vector2Int>(data.intersections.Select(j => PointKey(j.position)));
 
@@ -319,13 +329,13 @@ namespace PermisVR.Editor.Map
                 var right = MapGeometry.Offset(points, halfWidth);
                 for (var i = 0; i < points.Count - 1; i++)
                 {
-                    TileFor(roadTiles, (points[i] + points[i + 1]) * 0.5f)
-                        .AddQuad(left[i], left[i + 1], right[i + 1], right[i], Vector3.up);
+                    AddMaskedQuads(TileFor(roadTiles, (points[i] + points[i + 1]) * 0.5f), mask,
+                        points[i], points[i + 1], left[i], left[i + 1], right[i + 1], right[i], Vector3.up);
                 }
 
                 if (!road.oneWay && road.lanes >= 2)
                 {
-                    AddCenterDashes(markingTiles, points);
+                    AddCenterDashes(markingTiles, points, mask);
                 }
 
                 if (NoSidewalkHighways.Contains(road.highway))
@@ -339,8 +349,8 @@ namespace PermisVR.Editor.Map
                 var trimmed = MapGeometry.Trim(points, trimStart, trimEnd, MinSidewalkLengthM);
                 if (trimmed != null)
                 {
-                    AddSidewalk(sidewalkTiles, trimmed, halfWidth, 1f);
-                    AddSidewalk(sidewalkTiles, trimmed, halfWidth, -1f);
+                    AddSidewalk(sidewalkTiles, trimmed, halfWidth, 1f, mask);
+                    AddSidewalk(sidewalkTiles, trimmed, halfWidth, -1f, mask);
                 }
             }
         }
@@ -348,7 +358,34 @@ namespace PermisVR.Editor.Map
         private static Vector2Int PointKey(MapPoint p) =>
             new(Mathf.RoundToInt(p.x * 100f), Mathf.RoundToInt(p.z * 100f));
 
-        private static void AddSidewalk(Dictionary<Vector2Int, MeshBuilder> tiles, List<Vector3> points, float halfWidth, float side)
+        /// Adds the a-b-c-d quad (a-b along the centre from `from` to `to`, c-d its far edge reversed),
+        /// leaving out the parts that cross an underpass. Far from any underpass it is one quad.
+        private static void AddMaskedQuads(MeshBuilder builder, UnderpassMask mask, Vector3 from, Vector3 to,
+            Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 facing)
+        {
+            if (mask.IsEmpty || !mask.MayTouch(from, to))
+            {
+                builder.AddQuad(a, b, c, d, facing);
+                return;
+            }
+
+            var direction = to - from;
+            var pieces = Mathf.Max(1, Mathf.CeilToInt(direction.magnitude / MaskPieceM));
+            for (var k = 0; k < pieces; k++)
+            {
+                var t0 = (float)k / pieces;
+                var t1 = (float)(k + 1) / pieces;
+                if (mask.HidesCrossing(Vector3.Lerp(from, to, (t0 + t1) * 0.5f), direction))
+                {
+                    continue;
+                }
+
+                builder.AddQuad(Vector3.Lerp(a, b, t0), Vector3.Lerp(a, b, t1), Vector3.Lerp(d, c, t1), Vector3.Lerp(d, c, t0), facing);
+            }
+        }
+
+        private static void AddSidewalk(Dictionary<Vector2Int, MeshBuilder> tiles, List<Vector3> points, float halfWidth,
+            float side, UnderpassMask mask)
         {
             var inner = MapGeometry.Offset(points, side * halfWidth);
             var outer = MapGeometry.Offset(points, side * (halfWidth + SidewalkWidthM));
@@ -364,14 +401,16 @@ namespace PermisVR.Editor.Map
                 }
 
                 var builder = TileFor(tiles, (points[i] + points[i + 1]) * 0.5f);
-                builder.AddQuad(inner[i] + raise, inner[i + 1] + raise, outer[i + 1] + raise, outer[i] + raise, Vector3.up);
+                AddMaskedQuads(builder, mask, points[i], points[i + 1],
+                    inner[i] + raise, inner[i + 1] + raise, outer[i + 1] + raise, outer[i] + raise, Vector3.up);
 
                 var towardRoad = MapGeometry.Right(direction.normalized) * -side;
-                builder.AddQuad(inner[i], inner[i + 1], inner[i + 1] + raise, inner[i] + raise, towardRoad);
+                AddMaskedQuads(builder, mask, points[i], points[i + 1],
+                    inner[i], inner[i + 1], inner[i + 1] + raise, inner[i] + raise, towardRoad);
             }
         }
 
-        private static void AddCenterDashes(Dictionary<Vector2Int, MeshBuilder> tiles, List<Vector3> points)
+        private static void AddCenterDashes(Dictionary<Vector2Int, MeshBuilder> tiles, List<Vector3> points, UnderpassMask mask)
         {
             var length = MapGeometry.Length(points);
             for (var distance = DashGapM * 0.5f; distance + DashLengthM <= length; distance += DashLengthM + DashGapM)
@@ -386,6 +425,11 @@ namespace PermisVR.Editor.Map
                 }
 
                 var direction = along.normalized;
+                if (!mask.IsEmpty && mask.HidesCrossing((start + end) * 0.5f, direction))
+                {
+                    continue;
+                }
+
                 TileFor(tiles, start).AddRect((start + end) * 0.5f, direction, MapGeometry.Right(direction),
                     along.magnitude * 0.5f, LineHalfWidthM, MarkingY);
             }
