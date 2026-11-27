@@ -3,6 +3,7 @@
     "rootNamespace": "PermisVR.Editor",
     "references": [
         "PermisVR.Exam",
+        "PermisVR.Route",
         "PermisVR.ExamUnity",
         "PermisVR.Vehicle",
         "PermisVR.Input",

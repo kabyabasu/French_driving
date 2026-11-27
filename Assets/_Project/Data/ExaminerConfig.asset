@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a186f091293a340c3b4f4ffc2afefc5e, type: 3}
+  m_Name: ExaminerConfig
+  m_EditorClassIdentifier: PermisVR.ExamUnity::PermisVR.ExamUnity.Config.ExaminerConfigAsset
+  departDelayS: 3
+  announceLeadS: 7
+  minAnnounceM: 40
+  maxAnnounceM: 130
+  passedBeyondM: 10
+  junctionBehindM: 5
+  minGapS: 4
+  offRouteLateralM: 20
+  offRouteDelayS: 3
+  pullOverBeforeEndM: 120
+  stoppedForS: 2
+  stoppedSpeedKmh: 1
+  searchBackM: 20
+  searchAheadM: 60
+  startSearchM: 100
+  finishToleranceM: 10
+  reacquireAboveM: 25
+  rejoinWithinM: 8
+  subtitleExtraS: 2
