@@ -3,6 +3,7 @@
     "rootNamespace": "PermisVR.Exam.Tests",
     "references": [
         "PermisVR.Exam",
+        "PermisVR.Route",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

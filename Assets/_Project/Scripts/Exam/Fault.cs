@@ -7,7 +7,7 @@ namespace PermisVR.Exam
     }
 
     /// One recorded exam fault: which rule, where and when it happened, and why in French.
-    /// Position is map metres from the start point; RoutePositionM is 0 until routes exist (M5).
+    /// Position is map metres from the start point; RoutePositionM is the distance along the exam route (0 without one).
     public readonly struct Fault
     {
         public readonly string RuleId;

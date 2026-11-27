@@ -13,6 +13,8 @@ namespace PermisVR.ExamUnity
         [SerializeField] private CarController _car;
         [SerializeField] private StopSignRuleConfigAsset _stopSignConfig;
         [SerializeField] private MirrorRulesConfigAsset _mirrorRulesConfig;
+        [Tooltip("Optional: gives every fault its distance along the exam route.")]
+        [SerializeField] private ExamRouteGuide _routeGuide;
 
         private readonly ExamEventBus _bus = new();
         private Rigidbody _carBody;
@@ -64,8 +66,8 @@ namespace PermisVR.ExamUnity
             // Speed along the road only: the car settling on its suspension at spawn (vertical
             // motion) must not look like moving off. Physics is m/s; km/h from here on.
             var speedKmh = Vector3.ProjectOnPlane(_carBody.linearVelocity, carTransform.up).magnitude * 3.6f;
-            // Route position stays 0 until exam routes exist (M5).
-            return new VehicleSnapshot(Time.time, speedKmh, 0f, carTransform.eulerAngles.y, position.x, position.z);
+            var routePositionM = _routeGuide != null ? _routeGuide.RoutePositionM : 0f;
+            return new VehicleSnapshot(Time.time, speedKmh, routePositionM, carTransform.eulerAngles.y, position.x, position.z);
         }
     }
 }

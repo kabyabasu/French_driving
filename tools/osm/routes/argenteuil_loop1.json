@@ -1,0 +1,13 @@
+{
+  "id": "argenteuil_loop1",
+  "name": "Boucle 1 : départ et zone résidentielle",
+  "source": "Route description given by the user on 2026-11-27 (departure via Rue d'Épinay, Rue des Cas Rouges, Rue Jacques Brel / D109, Route de Saint-Gratien towards Sannois, A15, return via Boulevard Héloïse, Avenue Gabriel Péri, Rue de la Grande Ceinture, Rue d'Épinay). Not yet confirmed by an auto-école or a GPS trace. Only section 1 is inside the 1 km map: the route ends where Route de Saint-Gratien leaves it.",
+  "start": {"x": 0.0, "z": 0.0},
+  "via": [
+    "Rue d'Épinay",
+    "Rue des Cas Rouges",
+    "Rue Jacques Brel",
+    "Route de Saint-Gratien"
+  ],
+  "end": {"x": 223.0, "z": 938.0}
+}
