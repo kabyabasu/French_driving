@@ -3,10 +3,13 @@ using UnityEngine.InputSystem;
 
 namespace PermisVR.Input
 {
-    /// Steering wheel turned by one or both hands. A grip press near the rim grabs it and the hand
-    /// stays on until the grip is pressed again (or the hand moves far away), so the button doesn't
-    /// have to be held down. While held, the hands' average frame-to-frame angle change around the
-    /// wheel turns it (hand-over-hand past 180° works). Self-centres when released, faster at speed.
+    /// Steering wheel turned by one or both hands. Grabbing near the rim works two ways:
+    /// a quick tap of the grip latches the hand on until the next tap (no need to hold the button
+    /// while cruising); squeezing and holding grips only while squeezed, so letting go of the
+    /// button lets go of the wheel (quick hand-over-hand). A hand also lets go if it moves far
+    /// away. While held, the hands' average frame-to-frame angle change around the wheel turns it.
+    /// Released, it self-centres like a real car: not at all when stopped, gently at manoeuvring
+    /// speed, firmly at road speed.
     public sealed class VirtualSteeringWheel : MonoBehaviour
     {
         [SerializeField] private SteeringWheelConfig _config;
@@ -29,6 +32,9 @@ namespace PermisVR.Input
         {
             public bool Held;
             public bool GripDown;
+            /// Held by a quick tap: stays on after the grip is released, until the next press.
+            public bool Latched;
+            public float PressStartS;
             /// Where on the rim the hand holds, in the wheel's own (rotating) frame, degrees.
             public float GrabAngleOnWheelDeg;
             public float? PrevAngleDeg;
@@ -111,6 +117,7 @@ namespace PermisVR.Input
 
             var gripValue = grip != null ? grip.action.ReadValue<float>() : 0f;
             var pressed = false;
+            var releasedButton = false;
             if (!state.GripDown && gripValue >= PressOn)
             {
                 state.GripDown = true;
@@ -119,20 +126,45 @@ namespace PermisVR.Input
             else if (state.GripDown && gripValue <= PressOff)
             {
                 state.GripDown = false;
+                releasedButton = true;
             }
 
             var distance = DistanceFromRim(hand.position);
-            if (state.Held && (pressed || distance > _config.releaseDistanceM))
+            if (state.Held && distance > _config.releaseDistanceM)
             {
-                state.Held = false;
-                state.PrevAngleDeg = null;
+                LetGo(ref state);
+            }
+            else if (state.Held && state.Latched && pressed)
+            {
+                LetGo(ref state); // second tap
+            }
+            else if (state.Held && !state.Latched && releasedButton)
+            {
+                // Short press = tap: stay on. Long squeeze = held grip: letting go of the button lets go.
+                if (Time.time - state.PressStartS <= _config.tapMaxS)
+                {
+                    state.Latched = true;
+                }
+                else
+                {
+                    LetGo(ref state);
+                }
             }
             else if (!state.Held && pressed && distance <= _config.grabDistanceM)
             {
                 state.Held = true;
+                state.Latched = false;
+                state.PressStartS = Time.time;
                 state.GrabAngleOnWheelDeg = AngleAroundWheel(hand.position) + _wheelAngleDeg;
                 state.PrevAngleDeg = null;
             }
+        }
+
+        private static void LetGo(ref HandState state)
+        {
+            state.Held = false;
+            state.Latched = false;
+            state.PrevAngleDeg = null;
         }
 
         private void AccumulateDelta(Transform hand, ref HandState state, ref float deltaSum, ref int contributing)
@@ -180,8 +212,16 @@ namespace PermisVR.Input
                 return;
             }
 
+            // Real self-aligning torque comes from the tyres rolling: none when stopped, weak while
+            // manoeuvring (so a U-turn isn't lost between hand changes), full by road speed.
+            var ramp = Mathf.Clamp01((_carSpeedKmh - _config.centerStartSpeedKmh)
+                                     / Mathf.Max(_config.centerFullSpeedKmh - _config.centerStartSpeedKmh, 0.01f));
             var speedMultiplier = 1f + _carSpeedKmh / Mathf.Max(_config.centerRateReferenceSpeedKmh, 0.01f);
-            var step = _config.centerRateDegPerSec * speedMultiplier * deltaTimeS;
+            var step = _config.centerRateDegPerSec * speedMultiplier * ramp * ramp * deltaTimeS;
+            if (step <= 0f)
+            {
+                return;
+            }
             _wheelAngleDeg = Mathf.MoveTowards(_wheelAngleDeg, 0f, step);
         }
     }

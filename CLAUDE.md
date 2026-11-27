@@ -80,11 +80,11 @@ A real wheel + pedals (Windows build via Quest Link) may come later. To keep tha
 | `Pause` | Button | | Left menu button |
 
 ### Virtual steering wheel (`Input/VirtualSteeringWheel.cs`)
-- Press a grip button once near the rim to grab; press again to let go (no need to hold the button). A held hand also lets go if it moves far from the rim. Works with one or two hands.
+- Grip near the rim to grab, two ways: a quick tap (< `tapMaxS`, 0.3 s) latches the hand on until the next tap (no need to hold the button while cruising); squeezing and holding grips only while squeezed, so releasing the button lets go (quick hand-over-hand in U-turns). A held hand also lets go if it moves far from the rim. Works with one or two hands; one hand can also circle around the rim without regripping.
 - For each held hand, project the hand position onto the wheel plane, compute its angle around the wheel center, and add the frame-to-frame delta to the wheel angle (averaged over the held hands, so two hands don't double the turn). This allows hand-over-hand turning beyond 180°.
 - Held hands are drawn on the rim where they grabbed (`SteeringHandVisual`); free hands follow the controllers.
 - `Steer = wheelAngle / maxWheelAngle`. `maxWheelAngle` lives in a ScriptableObject (default ±225°, i.e. 450° lock-to-lock: a real car's 900° felt sluggish in VR); front wheels max ~35°, fading to 12° at 80 km/h.
-- When released, the wheel self-centers at a rate that increases with car speed, like a real car.
+- When released, the wheel self-centers like a real car: not at all below ~3 km/h, gently while manoeuvring (quadratic ramp), full strength by ~30 km/h and faster beyond. So a U-turn isn't lost while changing hands.
 - Indicators self-cancel once the wheel returns near center after a turn.
 
 ### Triggers and haptics

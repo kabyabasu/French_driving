@@ -13,8 +13,14 @@ namespace PermisVR.Input
         public float centerRateDegPerSec = 180f;
         [Tooltip("Centering rate doubles by the time the car reaches this speed.")]
         public float centerRateReferenceSpeedKmh = 50f;
+        [Tooltip("Below this speed the released wheel stays where it is (no tyre self-aligning when stopped).")]
+        public float centerStartSpeedKmh = 3f;
+        [Tooltip("Centering ramps up (quadratically) from the start speed to full strength at this speed.")]
+        public float centerFullSpeedKmh = 30f;
 
-        [Header("Grabbing (press grip once to hold, again to let go)")]
+        [Header("Grabbing (tap grip = stay on until next tap; squeeze and hold = grip while squeezed)")]
+        [Tooltip("A grip press shorter than this latches the hand on; a longer one grips only while held.")]
+        public float tapMaxS = 0.3f;
         [Tooltip("Radius of the wheel rim; held hands are drawn on it.")]
         public float rimRadiusM = 0.18f;
         [Tooltip("A grip press grabs the wheel only if the hand is this close to the rim.")]
