@@ -114,8 +114,8 @@ namespace PermisVR.Editor.Map
             var signCount = BuildSigns(root, data, markingTiles, session);
             BuildJunctionZones(root, data, session);
 
-            EmitTiles(root, "Roads", roadTiles, MapMaterialLibrary.Get("Road", new Color(0.2f, 0.2f, 0.22f)), false);
-            EmitTiles(root, "Sidewalks", sidewalkTiles, MapMaterialLibrary.Get("Sidewalk", new Color(0.62f, 0.62f, 0.6f)), true);
+            EmitTiles(root, "Roads", roadTiles, MapMaterialLibrary.GetTextured("Road", MapTextureLibrary.Asphalt(), MapTextureLibrary.AsphaltRepeatM), false);
+            EmitTiles(root, "Sidewalks", sidewalkTiles, MapMaterialLibrary.GetTextured("Sidewalk", MapTextureLibrary.Paving(), MapTextureLibrary.PavingRepeatM), true);
             EmitTiles(root, "Markings", markingTiles, MapMaterialLibrary.Get("Marking", new Color(0.95f, 0.95f, 0.92f)), false);
             EmitTiles(root, "Buildings", buildingTiles, MapMaterialLibrary.Get("Building", new Color(0.83f, 0.77f, 0.66f)), true);
             var underpassCount = SceneryBuilder.BuildUnderpasses(root, data.underpasses, SidewalkWidthM);

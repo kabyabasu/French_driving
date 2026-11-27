@@ -152,7 +152,7 @@ namespace PermisVR.Editor.Map
 
             var layer = new GameObject("WallsAndFences").transform;
             layer.SetParent(root, false);
-            EmitTiles(layer, "Walls", wallTiles, MapMaterialLibrary.Get("Wall", new Color(0.8f, 0.76f, 0.68f)), true);
+            EmitTiles(layer, "Walls", wallTiles, MapMaterialLibrary.GetTextured("Wall", MapTextureLibrary.WallRender(), MapTextureLibrary.WallRepeatM), true);
             EmitTiles(layer, "Fences", fenceTiles, MapMaterialLibrary.Get("Fence", new Color(0.2f, 0.27f, 0.22f)), true);
             EmitTiles(layer, "Hedges", hedgeTiles, MapMaterialLibrary.Get("Hedge", new Color(0.2f, 0.35f, 0.15f)), true);
             return built;

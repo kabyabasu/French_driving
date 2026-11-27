@@ -6,10 +6,13 @@ namespace PermisVR.Editor.Map
 {
     /// Accumulates flat-shaded triangles for one merged tile mesh. Winding is derived from
     /// the requested facing direction, so callers never have to get vertex order right.
+    /// UVs are world-space metres (top-down for floors, along-the-face + height for walls), so a
+    /// material's texture scale is simply 1 / (metres per texture repeat) and tiles join seamlessly.
     internal sealed class MeshBuilder
     {
         private readonly List<Vector3> _vertices = new();
         private readonly List<Vector3> _normals = new();
+        private readonly List<Vector2> _uvs = new();
         private readonly List<int> _triangles = new();
 
         public bool IsEmpty => _triangles.Count == 0;
@@ -23,12 +26,9 @@ namespace PermisVR.Editor.Map
 
             var start = _vertices.Count;
             var normal = facing.normalized;
-            _vertices.Add(a);
-            _vertices.Add(b);
-            _vertices.Add(c);
-            _normals.Add(normal);
-            _normals.Add(normal);
-            _normals.Add(normal);
+            AddVertex(a, normal);
+            AddVertex(b, normal);
+            AddVertex(c, normal);
             _triangles.Add(start);
             _triangles.Add(start + 1);
             _triangles.Add(start + 2);
@@ -44,14 +44,10 @@ namespace PermisVR.Editor.Map
 
             var start = _vertices.Count;
             var normal = facing.normalized;
-            _vertices.Add(a);
-            _vertices.Add(b);
-            _vertices.Add(c);
-            _vertices.Add(d);
-            for (var i = 0; i < 4; i++)
-            {
-                _normals.Add(normal);
-            }
+            AddVertex(a, normal);
+            AddVertex(b, normal);
+            AddVertex(c, normal);
+            AddVertex(d, normal);
 
             _triangles.Add(start);
             _triangles.Add(start + 1);
@@ -59,6 +55,25 @@ namespace PermisVR.Editor.Map
             _triangles.Add(start);
             _triangles.Add(start + 2);
             _triangles.Add(start + 3);
+        }
+
+        private void AddVertex(Vector3 position, Vector3 normal)
+        {
+            _vertices.Add(position);
+            _normals.Add(normal);
+            _uvs.Add(WorldUv(position, normal));
+        }
+
+        private static Vector2 WorldUv(Vector3 position, Vector3 normal)
+        {
+            if (Mathf.Abs(normal.y) > 0.7f)
+            {
+                return new Vector2(position.x, position.z);
+            }
+
+            // Horizontal direction along the face; v = height above ground.
+            var along = new Vector3(-normal.z, 0f, normal.x).normalized;
+            return new Vector2(Vector3.Dot(position, along), position.y);
         }
 
         /// Flat rectangle in the XZ plane at height y.
@@ -79,6 +94,7 @@ namespace PermisVR.Editor.Map
             };
             mesh.SetVertices(_vertices);
             mesh.SetNormals(_normals);
+            mesh.SetUVs(0, _uvs);
             mesh.SetTriangles(_triangles, 0);
             mesh.RecalculateBounds();
             return mesh;
