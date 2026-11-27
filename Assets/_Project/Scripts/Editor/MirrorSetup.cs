@@ -63,11 +63,13 @@ namespace PermisVR.Editor
 
             // Car-local positions: body is x ±0.9, y 0..1, z ±2; the driver sits at the cockpit (left seat).
             var eye = car.transform.InverseTransformPoint(head.position);
-            var interior = CreateMirror(container, "InteriorMirror", new Vector3(0f, 0.88f, 0.95f), new Vector2(0.24f, 0.07f),
+            // Interior mirror just behind the top of the windscreen; door mirrors at the front of the
+            // doors, a little below eye level (matches the hatchback body from CarUpgradeSetup).
+            var interior = CreateMirror(container, "InteriorMirror", new Vector3(0f, 0.86f, 0.66f), new Vector2(0.24f, 0.07f),
                 new Vector3(0f, -0.05f, -1f), eye, 256, 75, 15f, 0, config, glass, housing);
-            var left = CreateMirror(container, "LeftMirror", new Vector3(-0.98f, 0.7f, 0.85f), new Vector2(0.16f, 0.11f),
+            var left = CreateMirror(container, "LeftMirror", new Vector3(-0.98f, 0.4f, 0.9f), new Vector2(0.16f, 0.11f),
                 new Vector3(-0.25f, 0f, -1f), eye, 160, 110, 25f, 1, config, glass, housing);
-            var right = CreateMirror(container, "RightMirror", new Vector3(0.98f, 0.7f, 0.85f), new Vector2(0.16f, 0.11f),
+            var right = CreateMirror(container, "RightMirror", new Vector3(0.98f, 0.4f, 0.9f), new Vector2(0.16f, 0.11f),
                 new Vector3(0.25f, 0f, -1f), eye, 160, 110, 25f, 0, config, glass, housing);
 
             AddGazeSensor(cockpit, session, head, interior, left, right);
