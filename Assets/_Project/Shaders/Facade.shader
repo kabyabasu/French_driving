@@ -12,6 +12,8 @@ Shader "PermisVR/Facade"
     {
         _MainTex ("Facade atlas", 2D) = "white" {}
         _StoreyM ("Storey height (m)", Float) = 3
+        _ContactShade ("Darkening at the foot of walls", Range(0, 1)) = 0.3
+        _ContactHeightM ("Height of the darkening (m)", Float) = 1.2
     }
     SubShader
     {
@@ -24,6 +26,8 @@ Shader "PermisVR/Facade"
 
         sampler2D _MainTex;
         float _StoreyM;
+        float _ContactShade;
+        float _ContactHeightM;
 
         struct Input
         {
@@ -64,9 +68,11 @@ Shader "PermisVR/Facade"
             }
 
             fixed3 wall = WallTints[tint];
+            // Fake ambient occlusion where the wall meets the ground (no baked lighting).
+            fixed contact = lerp(1.0 - _ContactShade, 1.0, saturate(IN.uv_MainTex.y / _ContactHeightM));
             if (IN.color.a < 0.5)
             {
-                o.Albedo = wall * 0.97;
+                o.Albedo = wall * 0.97 * contact;
                 return;
             }
 
@@ -90,7 +96,7 @@ Shader "PermisVR/Facade"
             // Gradients of the continuous coordinates: no mip seams at the cell edges.
             float2 continuous = float2(coord.x / 4.0, storeyCoord / 2.0);
             fixed4 texel = tex2Dgrad(_MainTex, cell, ddx(continuous), ddy(continuous));
-            o.Albedo = lerp(texel.rgb, texel.rgb * wall * 1.08, texel.a);
+            o.Albedo = lerp(texel.rgb, texel.rgb * wall * 1.08, texel.a) * contact;
         }
         ENDCG
     }

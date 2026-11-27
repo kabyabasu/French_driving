@@ -62,8 +62,6 @@ namespace PermisVR.Editor.Map
         private const float AtJunctionM = 3f;
         private const float TrafficLightSetbackM = 6f;
         private const float MinBuildingAreaM2 = 4f;
-        private const float FogStartM = 250f;
-        private const float FogEndM = 550f;
         private const float FarClipM = 600f;
 
         private static readonly HashSet<string> NoSidewalkHighways = new()
@@ -876,11 +874,7 @@ namespace PermisVR.Editor.Map
 
         private static void ConfigureView()
         {
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogStartDistance = FogStartM;
-            RenderSettings.fogEndDistance = FogEndM;
-            RenderSettings.fogColor = new Color(0.72f, 0.76f, 0.8f);
+            LightingSetup.Apply(); // sun, ambient, sky and fog
 
             var camera = Camera.main != null ? Camera.main : Object.FindFirstObjectByType<Camera>();
             if (camera != null)

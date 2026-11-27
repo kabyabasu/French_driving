@@ -205,6 +205,7 @@ Keep these values in data, not code. **Verify against the official Sécurité ro
 - Profile on the device, not in the Editor.
 - Starting budget (adjust after profiling): ≤ 200 draw calls, ≤ 750k visible triangles per frame.
 - Baked lighting + light probes. At most one realtime directional light; shadows off or one short cascade.
+  - Current: `PermisVR > Scene > Apply Lighting (Summer Afternoon)` (also run by the map importer): one realtime sun without shadows (Built-in directional shadows add a full depth pass), trilight ambient, procedural sky, fog matched to the horizon. Façades fake contact shadow at their foot. Nothing baked yet.
 - Static batching or GPU instancing for buildings and props; LODs on meshes over ~1k triangles.
 - ASTC textures, atlases where possible, minimal post-processing. Fixed foveated rendering on.
 - No allocations in `Update`/`FixedUpdate`: no LINQ, no string building, no `new` collections. Cache `GetComponent`; no `Find*` at runtime.

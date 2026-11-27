@@ -198,7 +198,8 @@ namespace PermisVR.Editor.Map
             {
                 var outward3 = new Vector3(axisLong.x, 0f, axisLong.y) * end;
                 builder.AddTriangle(P(end * halfLong, -halfShort, height), P(end * halfLong, halfShort, height),
-                    P(end * halfLong, 0f, ridge), Vector2.zero, Vector2.zero, Vector2.zero, outward3, gableColor);
+                    P(end * halfLong, 0f, ridge), new Vector2(0f, height), new Vector2(0f, height), new Vector2(0f, ridge),
+                    outward3, gableColor); // uv.y = height, so the shader's ground darkening skips the gable
             }
 
             return true;
