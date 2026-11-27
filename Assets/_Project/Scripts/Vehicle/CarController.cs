@@ -2,7 +2,9 @@ using UnityEngine;
 
 namespace PermisVR.Vehicle
 {
-    /// Drives the car from WheelColliders. Reads only IDrivingInput, never a device directly.
+    /// Drives the car from WheelColliders (front-wheel drive, like a small hatchback). Reads only
+    /// IDrivingInput, never a device directly. Push is force- then power-limited, so it accelerates
+    /// like a real small car instead of a fixed torque that keeps pulling at any speed.
     [RequireComponent(typeof(Rigidbody))]
     public sealed class CarController : MonoBehaviour
     {
@@ -12,12 +14,13 @@ namespace PermisVR.Vehicle
         [SerializeField] private WheelCollider _frontLeft;
         [SerializeField] private WheelCollider _frontRight;
 
-        [Header("Rear (driven)")]
+        [Header("Rear (braked only)")]
         [SerializeField] private WheelCollider _rearLeft;
         [SerializeField] private WheelCollider _rearRight;
 
         private Rigidbody _rigidbody;
         private IDrivingInput _input;
+        private float _engineThrottle;
 
         public Gear CurrentGear { get; private set; } = Gear.Drive;
 
@@ -55,7 +58,16 @@ namespace PermisVR.Vehicle
                 CurrentGear = requestedGear;
             }
 
-            var motorTorque = _input.Throttle * _config.motorTorque;
+            // Engine response lags the pedal going up; lifting off is immediate.
+            var pedal = Mathf.Clamp01(_input.Throttle);
+            _engineThrottle = pedal > _engineThrottle
+                ? Mathf.MoveTowards(_engineThrottle, pedal, Time.fixedDeltaTime / Mathf.Max(_config.throttleRiseS, 0.01f))
+                : pedal;
+
+            var speedMs = _rigidbody.linearVelocity.magnitude;
+            var pushN = Mathf.Min(_config.maxTractiveForceN, _config.maxPowerKw * 1000f / Mathf.Max(speedMs, 0.5f));
+            // Split across the two driven (front) wheels.
+            var motorTorque = _engineThrottle * pushN * _frontLeft.radius * 0.5f;
             if (CurrentGear == Gear.Reverse)
             {
                 motorTorque = SpeedKmh < _config.maxReverseSpeedKmh
@@ -65,8 +77,8 @@ namespace PermisVR.Vehicle
 
             _frontLeft.motorTorque = motorTorque;
             _frontRight.motorTorque = motorTorque;
-            _rearLeft.motorTorque = motorTorque;
-            _rearRight.motorTorque = motorTorque;
+            _rearLeft.motorTorque = 0f;
+            _rearRight.motorTorque = 0f;
 
             var brakeTorque = _input.Brake * _config.brakeTorque;
             if (_input.Throttle <= 0f)
@@ -78,10 +90,13 @@ namespace PermisVR.Vehicle
             var velocity = _rigidbody.linearVelocity;
             _rigidbody.AddForce(-_config.airDragCoefficient * velocity.magnitude * velocity);
 
-            _frontLeft.brakeTorque = brakeTorque;
-            _frontRight.brakeTorque = brakeTorque;
-            _rearLeft.brakeTorque = brakeTorque;
-            _rearRight.brakeTorque = brakeTorque;
+            // brakeTorque is the per-wheel average; the bias shifts it towards the front axle.
+            var front = brakeTorque * 2f * _config.brakeFrontBias;
+            var rear = brakeTorque * 2f * (1f - _config.brakeFrontBias);
+            _frontLeft.brakeTorque = front;
+            _frontRight.brakeTorque = front;
+            _rearLeft.brakeTorque = rear;
+            _rearRight.brakeTorque = rear;
         }
 
         public float SpeedKmh => _rigidbody.linearVelocity.magnitude * 3.6f;

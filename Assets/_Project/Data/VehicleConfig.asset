@@ -13,6 +13,17 @@ MonoBehaviour:
   m_Name: VehicleConfig
   m_EditorClassIdentifier: PermisVR.Vehicle::PermisVR.Vehicle.VehicleConfig
   maxSteerAngleDeg: 35
-  motorTorque: 1500
-  brakeTorque: 3000
+  highSpeedSteerAngleDeg: 12
+  highSpeedReferenceKmh: 80
+  gearChangeMaxSpeedKmh: 1
+  reverseTorqueFactor: 0.5
+  maxReverseSpeedKmh: 15
+  centerOfMass: {x: 0, y: -0.6, z: 0}
+  maxTractiveForceN: 3300
+  maxPowerKw: 60
+  throttleRiseS: 0.35
+  brakeTorque: 1350
+  brakeFrontBias: 0.65
+  engineBrakeTorque: 120
+  airDragCoefficient: 0.4
   interpolate: 1
