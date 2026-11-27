@@ -103,6 +103,7 @@ namespace PermisVR.Editor.Map
             var sidewalkTiles = new Dictionary<Vector2Int, MeshBuilder>();
             var markingTiles = new Dictionary<Vector2Int, MeshBuilder>();
             var buildingTiles = new Dictionary<Vector2Int, MeshBuilder>();
+            var signTiles = new Dictionary<Vector2Int, MeshBuilder>();
 
             var session = EnsureExamSession();
             var underpassMask = new UnderpassMask(data.underpasses ?? new MapUnderpass[0],
@@ -110,13 +111,15 @@ namespace PermisVR.Editor.Map
             BuildGround(root);
             BuildRoads(data, roadTiles, sidewalkTiles, markingTiles, underpassMask);
             FacadeBuilder.Build(data, position => TileFor(buildingTiles, position), MinBuildingAreaM2);
-            var signCount = BuildSigns(root, data, markingTiles, session);
+            var signCount = BuildSigns(root, data, markingTiles, signTiles, session);
+            var speedSignCount = BuildSpeedSigns(data, signTiles);
             BuildJunctionZones(root, data, session);
 
             EmitTiles(root, "Roads", roadTiles, MapMaterialLibrary.GetTextured("Road", MapTextureLibrary.Asphalt(), MapTextureLibrary.AsphaltRepeatM), false);
             EmitTiles(root, "Sidewalks", sidewalkTiles, MapMaterialLibrary.GetTextured("Sidewalk", MapTextureLibrary.Paving(), MapTextureLibrary.PavingRepeatM), true);
             EmitTiles(root, "Markings", markingTiles, MapMaterialLibrary.Get("Marking", new Color(0.95f, 0.95f, 0.92f)), false);
             EmitTiles(root, "Buildings", buildingTiles, MapMaterialLibrary.GetFacade(MapTextureLibrary.FacadeAtlas()), true);
+            EmitTiles(root, "SignMeshes", signTiles, MapMaterialLibrary.GetSigns(SignAtlas.Texture()), false);
             var underpassCount = SceneryBuilder.BuildUnderpasses(root, data.underpasses, SidewalkWidthM);
             var barrierCount = SceneryBuilder.BuildBarriers(root, data.barriers);
             var treeCount = SceneryBuilder.BuildTrees(root, data.trees);
@@ -134,7 +137,7 @@ namespace PermisVR.Editor.Map
             RegisterBuildScenes();
 
             Debug.Log($"ArgenteuilMapImporter: {data.roads.Length} roads, {data.buildings.Length} buildings, " +
-                      $"{signCount} signs/markings, {underpassCount} underpasses, {barrierCount} walls/fences, " +
+                      $"{signCount} signs/markings, {speedSignCount} speed signs, {underpassCount} underpasses, {barrierCount} walls/fences, " +
                       $"{treeCount} trees imported into {M2ScenePath}. Sign directions are heuristic: " +
                       "verify each junction against street-level imagery before using it on a route.");
         }
@@ -464,7 +467,7 @@ namespace PermisVR.Editor.Map
         }
 
         private static int BuildSigns(Transform root, MapData data, Dictionary<Vector2Int, MeshBuilder> markingTiles,
-            ExamSession session)
+            Dictionary<Vector2Int, MeshBuilder> signTiles, ExamSession session)
         {
             var signsRoot = new GameObject("Signs").transform;
             signsRoot.SetParent(root, false);
@@ -500,7 +503,8 @@ namespace PermisVR.Editor.Map
                         break;
                     case "stop":
                         AddStopLine(markings, onRoad, travel, road);
-                        CreateStopSign(signsRoot, sign, onRoad + right * (halfWidth + SignEdgeOffsetM), travel);
+                        var stopFoot = onRoad + right * (halfWidth + SignEdgeOffsetM);
+                        SignBuilder.AddStop(TileFor(signTiles, stopFoot), stopFoot, travel);
                         CreateSensor(zonesRoot, session, $"StopApproach_{sign.osmId}",
                             onRoad - travel * (StopZoneLengthM * 0.5f) + laneCenter, travel, laneWidth, StopZoneLengthM,
                             ExamEventType.StopZoneEnter, $"stop_{sign.osmId}", null);
@@ -510,14 +514,16 @@ namespace PermisVR.Editor.Map
                         break;
                     case "give_way":
                         AddGiveWayLine(markings, onRoad, travel, road);
-                        CreateGiveWaySign(signsRoot, sign, onRoad + right * (halfWidth + SignEdgeOffsetM), travel);
+                        var yieldFoot = onRoad + right * (halfWidth + SignEdgeOffsetM);
+                        SignBuilder.AddYield(TileFor(signTiles, yieldFoot), yieldFoot, travel);
                         break;
                     case "traffic_signals":
                         // OSM often puts the signal node in the junction itself; set the line back from it.
                         var stopAt = onRoad - travel * TrafficLightSetbackM;
                         AddStopLine(markings, stopAt, travel, road);
                         var phaseOffsetS = PhaseOffset(position, travel, junctions, phaseReferenceByJunction, timing);
-                        var light = CreateTrafficLight(signsRoot, sign, stopAt + right * (halfWidth + SignEdgeOffsetM),
+                        var lightFoot = stopAt + right * (halfWidth + SignEdgeOffsetM);
+                        var light = CreateTrafficLight(signsRoot, TileFor(signTiles, lightFoot), sign, lightFoot,
                             travel, timing, phaseOffsetS);
                         // Sensor starts FrontOverhangM past the line so it fires when the front axle crosses.
                         CreateSensor(zonesRoot, session, $"LightLine_{sign.osmId}",
@@ -651,57 +657,24 @@ namespace PermisVR.Editor.Map
             return renderer;
         }
 
-        private static void CreateLabel(Transform parent, string text, Vector3 position, Color color, float characterSize)
+        private static readonly Vector3 LightHousingSize = new(0.3f, 0.9f, 0.22f);
+        private const float LightHousingCenterM = 2.9f;
+        private const float LampDiameterM = 0.2f;
+
+        /// Pole and housing go into the merged sign mesh; the three lamps are separate renderers
+        /// because TrafficLight swaps their materials.
+        private static TrafficLight CreateTrafficLight(Transform parent, MeshBuilder signs, MapSign sign, Vector3 position,
+            Vector3 travel, TrafficLightTiming timing, float phaseOffsetS)
         {
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var go = new GameObject("Label");
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = position;
-            var mesh = go.AddComponent<TextMesh>();
-            mesh.font = font;
-            mesh.text = text;
-            mesh.fontSize = 64;
-            mesh.characterSize = characterSize;
-            mesh.anchor = TextAnchor.MiddleCenter;
-            mesh.alignment = TextAlignment.Center;
-            mesh.color = color;
-            go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-        }
-
-        private static Material Post => MapMaterialLibrary.Get("SignPost", new Color(0.55f, 0.55f, 0.55f));
-        private static Material SignRed => MapMaterialLibrary.Get("SignRed", new Color(0.8f, 0.05f, 0.05f));
-        private static Material SignWhite => MapMaterialLibrary.Get("SignWhite", Color.white);
-
-        private static readonly Quaternion FacingDriver = Quaternion.Euler(90f, 0f, 0f);
-
-        private static void CreateStopSign(Transform parent, MapSign sign, Vector3 position, Vector3 travel)
-        {
-            var root = CreateSignRoot(parent, $"Stop_{sign.osmId}", position, travel);
-            CreatePart(PrimitiveType.Cylinder, root, new Vector3(0f, 1.1f, 0f), new Vector3(0.08f, 1.1f, 0.08f), Quaternion.identity, Post);
-            CreatePart(PrimitiveType.Cylinder, root, new Vector3(0f, 2.4f, 0f), new Vector3(0.75f, 0.02f, 0.75f), FacingDriver, SignRed);
-            CreateLabel(root, "STOP", new Vector3(0f, 2.4f, -0.03f), Color.white, 0.02f);
-        }
-
-        private static void CreateGiveWaySign(Transform parent, MapSign sign, Vector3 position, Vector3 travel)
-        {
-            var root = CreateSignRoot(parent, $"GiveWay_{sign.osmId}", position, travel);
-            CreatePart(PrimitiveType.Cylinder, root, new Vector3(0f, 1.1f, 0f), new Vector3(0.08f, 1.1f, 0.08f), Quaternion.identity, Post);
-            CreatePart(PrimitiveType.Cylinder, root, new Vector3(0f, 2.4f, 0f), new Vector3(0.8f, 0.02f, 0.8f), FacingDriver, SignRed);
-            CreatePart(PrimitiveType.Cylinder, root, new Vector3(0f, 2.4f, -0.025f), new Vector3(0.6f, 0.01f, 0.6f), FacingDriver, SignWhite);
-            CreateLabel(root, "CÉDEZ LE\nPASSAGE", new Vector3(0f, 2.4f, -0.04f), new Color(0.8f, 0.05f, 0.05f), 0.008f);
-        }
-
-        private static TrafficLight CreateTrafficLight(Transform parent, MapSign sign, Vector3 position, Vector3 travel,
-            TrafficLightTiming timing, float phaseOffsetS)
-        {
+            SignBuilder.AddTrafficLightBody(signs, position, travel, LightHousingCenterM, LightHousingSize);
             var root = CreateSignRoot(parent, $"TrafficLight_{sign.osmId}", position, travel);
             var off = MapMaterialLibrary.Get("LampOff", new Color(0.15f, 0.15f, 0.15f));
-            CreatePart(PrimitiveType.Cylinder, root, new Vector3(0f, 1.5f, 0f), new Vector3(0.1f, 1.5f, 0.1f), Quaternion.identity, Post);
-            CreatePart(PrimitiveType.Cube, root, new Vector3(0f, 3.4f, 0f), new Vector3(0.35f, 0.95f, 0.25f), Quaternion.identity,
-                MapMaterialLibrary.Get("LightHead", new Color(0.08f, 0.08f, 0.08f)));
-            var red = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.7f, -0.13f), Vector3.one * 0.22f, Quaternion.identity, off);
-            var amber = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.4f, -0.13f), Vector3.one * 0.22f, Quaternion.identity, off);
-            var green = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, 3.1f, -0.13f), Vector3.one * 0.22f, Quaternion.identity, off);
+            var pitch = LightHousingSize.y / 3f;
+            var lensZ = -LightHousingSize.z * 0.5f - 0.01f;
+            var lens = new Vector3(LampDiameterM, LampDiameterM, 0.04f);
+            var red = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, LightHousingCenterM + pitch, lensZ), lens, Quaternion.identity, off);
+            var amber = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, LightHousingCenterM, lensZ), lens, Quaternion.identity, off);
+            var green = CreatePart(PrimitiveType.Sphere, root, new Vector3(0f, LightHousingCenterM - pitch, lensZ), lens, Quaternion.identity, off);
 
             var light = root.gameObject.AddComponent<TrafficLight>();
             var so = new SerializedObject(light);
@@ -716,6 +689,26 @@ namespace PermisVR.Editor.Map
             so.FindProperty("_off").objectReferenceValue = off;
             so.ApplyModifiedPropertiesWithoutUndo();
             return light;
+        }
+
+        /// Speed-limit signs where the tagged maxspeed changes (see SpeedSignPlanner).
+        private static int BuildSpeedSigns(MapData data, Dictionary<Vector2Int, MeshBuilder> signTiles)
+        {
+            var count = 0;
+            foreach (var placement in SpeedSignPlanner.Plan(data.roads, SignEdgeOffsetM))
+            {
+                if (SignBuilder.AddSpeedLimit(TileFor(signTiles, placement.Foot), placement.Foot, placement.Travel,
+                        placement.Kmh, placement.ZoneEntry))
+                {
+                    count++;
+                }
+                else
+                {
+                    Debug.LogWarning($"ArgenteuilMapImporter: no sign artwork for {placement.Kmh} km/h; add it to SignAtlas.");
+                }
+            }
+
+            return count;
         }
 
         /// Lights at the same junction share a phase when their approaches are parallel (incl.

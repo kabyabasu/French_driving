@@ -33,7 +33,7 @@ namespace PermisVR.Editor.Map
         private const int FacadeCellPx = 256;
         public const float FacadeBayM = 3f;
 
-        private static Texture2D GetOrCreate(string name, int anisoLevel, Func<int, int, Color> paint,
+        internal static Texture2D GetOrCreate(string name, int anisoLevel, Func<int, int, Color> paint,
             int width = Size, int height = Size, bool alpha = false)
         {
             var path = $"{TexturesDir}/{name}.png";

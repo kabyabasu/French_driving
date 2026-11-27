@@ -122,7 +122,7 @@ Unity menu: PermisVR > Map > Import Argenteuil (Editor script)
 | `highway=traffic_signals` | Traffic light + stop line | Red-light rule (eliminatory) |
 | `highway=crossing` | Pedestrian crossing + pedestrian spawn | Pedestrian-yield rule |
 | `junction=roundabout` | Roundabout ring | Yield at entry, indicator on exit |
-| `maxspeed=*` | Speed zone + signs where it changes | Speed rule |
+| `maxspeed=*` | Speed zone + signs where it changes (only tagged limits; zone 30 panel when entering 30) | Speed rule |
 | `oneway=yes` | One-way direction | Wrong-way rule (eliminatory) |
 | Intersection with none of the above | Nothing extra | **Priorité à droite** (French default) |
 | `lanes`, `width` | Road width (default 3.25 m per lane); dashed centre line and lane dividers, trimmed back at junctions | Lane-position checks |
@@ -151,7 +151,7 @@ OSM data can be incomplete. A missing tag does not prove there is no sign: befor
 ### Map performance
 - Merge buildings per 200 m tile; one shared façade texture atlas (`PermisVR/Facade`: windows come from the texture, not geometry); no interiors.
 - Simple LOD boxes beyond ~300 m; fog and culling beyond ~500 m.
-- Roads and sidewalks as merged meshes per tile; signs and lights as instanced prefabs.
+- Roads and sidewalks as merged meshes per tile. Signs, posts and traffic-light housings are merged per tile too, textured from one procedural atlas (`SignAtlas`: STOP, cédez-le-passage, B14 limits, zone 30); only traffic-light lamps are separate renderers.
 
 ## Architecture: how grading works
 ```

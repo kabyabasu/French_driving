@@ -50,6 +50,26 @@ namespace PermisVR.Editor.Map
             return material;
         }
 
+        /// Road signs, posts and traffic-light housings: one atlas, cheap Lambert shading.
+        public static Material GetSigns(Texture2D atlas)
+        {
+            var path = $"{MaterialsDir}/Signs.mat";
+            var shader = Shader.Find("Mobile/Diffuse");
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                Directory.CreateDirectory(MaterialsDir);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.shader = shader;
+            material.mainTexture = atlas;
+            material.mainTextureScale = Vector2.one;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         /// Textured variant: the meshes carry world-space UVs in metres, so the texture repeats
         /// every repeatM metres. White tint, so the texture shows its own colours.
         public static Material GetTextured(string name, Texture2D texture, float repeatM)
