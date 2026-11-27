@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41c4ccf42177c472c8cd5e0c14e35bf9, type: 3}
   m_Name: SteeringWheelConfig
   m_EditorClassIdentifier: PermisVR.Input::PermisVR.Input.SteeringWheelConfig
-  maxWheelAngleDeg: 450
+  maxWheelAngleDeg: 225
   centerRateDegPerSec: 180
   centerRateReferenceSpeedKmh: 50
+  rimRadiusM: 0.18
+  grabDistanceM: 0.15
+  releaseDistanceM: 0.35
+  minHandRadiusM: 0.06

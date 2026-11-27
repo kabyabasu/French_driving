@@ -76,9 +76,10 @@ A real wheel + pedals (Windows build via Quest Link) may come later. To keep tha
 | `Pause` | Button | | Left menu button |
 
 ### Virtual steering wheel (`Input/VirtualSteeringWheel.cs`)
-- Grabbed with the grip buttons; works with one or two hands.
-- For each gripping hand, project the hand position onto the wheel plane, compute its angle around the wheel center, and add the frame-to-frame delta to the wheel angle. This allows hand-over-hand turning beyond 180°.
-- `Steer = wheelAngle / maxWheelAngle`. `maxWheelAngle` lives in a ScriptableObject (default ±450°, i.e. 900° lock-to-lock); front wheels max ~35°.
+- Press a grip button once near the rim to grab; press again to let go (no need to hold the button). A held hand also lets go if it moves far from the rim. Works with one or two hands.
+- For each held hand, project the hand position onto the wheel plane, compute its angle around the wheel center, and add the frame-to-frame delta to the wheel angle (averaged over the held hands, so two hands don't double the turn). This allows hand-over-hand turning beyond 180°.
+- Held hands are drawn on the rim where they grabbed (`SteeringHandVisual`); free hands follow the controllers.
+- `Steer = wheelAngle / maxWheelAngle`. `maxWheelAngle` lives in a ScriptableObject (default ±225°, i.e. 450° lock-to-lock: a real car's 900° felt sluggish in VR); front wheels max ~35°, fading to 12° at 80 km/h.
 - When released, the wheel self-centers at a rate that increases with car speed, like a real car.
 - Indicators self-cancel once the wheel returns near center after a turn.
 
